@@ -21,6 +21,7 @@ class TriggerTest < Minitest::Test
     )
     prompt = prompt_for(calls, "MOTO-1")
     assert_includes prompt, "Do this Linear issue: https://linear.app/gotte/issue/MOTO-1"
+    assert_includes prompt, "The manager runs this card. Do not use the `interactive-card` skill."
     assert_includes prompt, "This may be a new card or a kickback with corrections in later comments."
     assert_includes prompt, "There may already be a worktree, commits, and a PR."
     assert_includes prompt, "This session is already in the card worktree. Env files and schema.rb were copied from the main checkout."
@@ -80,11 +81,44 @@ class TriggerTest < Minitest::Test
     )
     prompt = prompt_for(calls, "MOTO-3")
     assert_includes prompt, "This Linear issue is approved: https://linear.app/gotte/issue/MOTO-3"
+    assert_includes prompt, "The manager runs this card. Do not use the `interactive-card` skill."
     assert_includes prompt, "Rebase the GitHub PR on the card."
     assert_includes prompt, "Merge the PR with `gh pr merge` using `GITHUB_TOKEN`."
     assert_includes prompt, "Remove the working tag."
     assert_includes prompt, "Move the card to completed."
+    assert_includes prompt, "If this session is in the main checkout rather than a worktree, run `mise manager:gotomain`."
+    refute_includes prompt, "Remove any worktrees created for this card."
     assert_equal Worktree.root, directory_for(calls, "MOTO-3")
+  end
+
+  def test_starts_merge_agent_in_worktree_pushing_to_card_branch
+    calls = stub_manager(
+      items: [
+        { id: "item-3", identifier: "MOTO-3", url: "https://linear.app/gotte/issue/MOTO-3", state: { id: "s-approved", name: "Approved" } },
+      ],
+    )
+    path = File.join(Worktree.root, ".claude/worktrees/brave-fox")
+    ok = Object.new
+    ok.define_singleton_method(:success?) { true }
+    Open3.stubs(:capture3).with("git", "worktree", "list", "--porcelain", chdir: Worktree.root).returns(
+      [
+        "worktree #{Worktree.root}\nHEAD abc\nbranch refs/heads/master\n\nworktree #{path}\nHEAD def\nbranch refs/heads/claude/brave-fox\n",
+        "",
+        ok,
+      ],
+    )
+    Open3.stubs(:capture3).with(
+      "git",
+      "for-each-ref",
+      "--format=%(refname:short) %(upstream:short)",
+      "refs/heads",
+      chdir: Worktree.root,
+    ).returns([ "master origin/master\nclaude/brave-fox origin/moto-3\n", "", ok ])
+
+    output, = capture_io { Trigger.call }
+
+    assert_equal "merging MOTO-3\n", output
+    assert_equal path, directory_for(calls, "MOTO-3")
   end
 
   def test_moves_ready_card_back_when_agent_fails
@@ -280,6 +314,47 @@ class TriggerTest < Minitest::Test
     capture_io { Trigger.call }
 
     assert_equal path, directory_for(calls, "MOTO-3")
+  end
+
+  def test_skips_interactive_cards_in_ready
+    calls = stub_manager(
+      items: [
+        { id: "item-1", identifier: "MOTO-1", url: "https://linear.app/gotte/issue/MOTO-1", state: { id: "s-ready", name: "Ready" }, labels: { nodes: [ { id: "l-interactive", name: "interactive" } ] } },
+        { id: "item-2", identifier: "MOTO-2", url: "https://linear.app/gotte/issue/MOTO-2", state: { id: "s-ready", name: "Ready" } },
+      ],
+    )
+
+    output, = capture_io { Trigger.call }
+
+    assert_equal "started working on MOTO-2\n", output
+    refute calls.any? { |call| call[:prompt].to_s.include?("MOTO-1") }
+    assert calls.select { |call| graphql?(call, "mutation IssueUpdate") }.all? { |call| call.dig(:payload, :variables, :id) == "item-2" }
+  end
+
+  def test_skips_ready_column_when_all_cards_are_interactive
+    calls = stub_manager(
+      items: [
+        { id: "item-1", identifier: "MOTO-1", url: "https://linear.app/gotte/issue/MOTO-1", state: { id: "s-ready", name: "Ready" }, labels: { nodes: [ { id: "l-interactive", name: "interactive" } ] } },
+      ],
+    )
+
+    output, = capture_io { Trigger.call }
+
+    assert_equal "", output
+    assert_empty issue_update_inputs(calls)
+  end
+
+  def test_merges_interactive_cards_when_approved
+    calls = stub_manager(
+      items: [
+        { id: "item-3", identifier: "MOTO-3", url: "https://linear.app/gotte/issue/MOTO-3", state: { id: "s-approved", name: "Approved" }, labels: { nodes: [ { id: "l-interactive", name: "interactive" } ] } },
+      ],
+    )
+
+    output, = capture_io { Trigger.call }
+
+    assert_equal "merging MOTO-3\n", output
+    assert_includes prompt_for(calls, "MOTO-3"), "This Linear issue is approved: https://linear.app/gotte/issue/MOTO-3"
   end
 
   def test_skips_cards_with_working_tag
