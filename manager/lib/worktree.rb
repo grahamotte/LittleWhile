@@ -18,15 +18,13 @@ class Worktree
     end
 
     def open(item)
-      path = path_for(item)
-      add(item, path) unless Dir.exist?(path)
-      copy_files(path)
+      path = existing(item) || add(item)
+      copy_files(path) unless path == root
       path
     end
 
     def directory(item)
-      path = path_for(item)
-      Dir.exist?(path) ? path : root
+      existing(item) || root
     end
 
     def remove(item)
@@ -43,7 +41,39 @@ class Worktree
 
     private
 
-    def add(item, path)
+    def existing(item)
+      path = path_for(item)
+      return path if Dir.exist?(path)
+
+      find(item)
+    end
+
+    def find(item)
+      branch = branch_for(item)
+      listed = worktrees
+      upstreams = run(
+        "git",
+        "for-each-ref",
+        "--format=%(refname:short) %(upstream:short)",
+        "refs/heads",
+      ).lines.to_h { |line| line.split.values_at(0, 1) }
+      found = listed.find do |worktree|
+        worktree[:branch] == branch || upstreams[worktree[:branch]] == "origin/#{branch}"
+      end
+      found&.fetch(:path)
+    end
+
+    def worktrees
+      run("git", "worktree", "list", "--porcelain").split("\n\n").map do |block|
+        lines = block.lines.map(&:strip)
+        path = lines.find { |line| line.start_with?("worktree ") }&.delete_prefix("worktree ")
+        branch = lines.find { |line| line.start_with?("branch ") }&.delete_prefix("branch refs/heads/")
+        { path:, branch: }
+      end
+    end
+
+    def add(item)
+      path = path_for(item)
       run("git", "fetch", "origin")
       branch = branch_for(item)
       listed = refs
@@ -54,6 +84,7 @@ class Worktree
       else
         run("git", "worktree", "add", "-b", branch, path, "origin/master")
       end
+      path
     end
 
     def copy_files(path)

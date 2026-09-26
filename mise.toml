@@ -8,6 +8,7 @@ deno = "2.9.5"
 [env]
 _.file = '.env.development'
 LANG = "{{ get_env(name='LANG', default='en_US.UTF-8') }}"
+GH_REPO = "{{ env.GITHUB_REPO | trim_start_matches(pat='git@github.com:') | trim_end_matches(pat='.git') }}"
 
 #
 # Dependencies
@@ -349,10 +350,12 @@ run = 'cd deploy && ruby set_version.rb "$usage_version"'
 [tasks.merge]
 run = [
   "if [ -n \"$(git status --porcelain)\" ]; then echo 'Error: You have uncommitted changes. Please commit or stash them before merging.'; exit 1; fi",
-  "git checkout master",
   "echo \"Merge recovery point: $(git rev-parse HEAD)\"",
   "if git remote get-url upstream >/dev/null 2>&1; then git remote set-url upstream git@github.com:grahamotte/codemoto.org.git; else git remote add upstream git@github.com:grahamotte/codemoto.org.git; fi",
-  "git fetch upstream master",
+  "git config remote.upstream.tagOpt --no-tags",
+  "git config remote.origin.gh-resolved base",
+  "git fetch --no-tags upstream master",
+  '''git ls-remote --tags upstream | grep -v "\^{}$" | while read -r sha ref; do tag="${ref#refs/tags/}"; if [ "$(git rev-parse -q --verify "refs/tags/$tag")" = "$sha" ]; then git tag -d "$tag"; fi; done''',
   "if ! git merge-base HEAD upstream/master >/dev/null; then echo 'Error: This repository does not share history with Code Moto.'; exit 1; fi",
   "git merge --no-edit --no-ff upstream/master",
 ]
@@ -388,3 +391,70 @@ run = "cd manager && bundle exec ruby sync_all.rb"
 [tasks."manager:watch"]
 depends = ["dependencies:manager"]
 run = "cd manager && bundle exec ruby watch.rb"
+
+[tasks."manager:gotomain"]
+depends = ["dependencies:manager"]
+run = "cd manager && bundle exec ruby goto_main.rb"
+
+[tasks."manager:gotomainall"]
+depends = ["dependencies:manager"]
+run = "cd manager && bundle exec ruby goto_main_all.rb"
+
+#
+# Linear
+#
+
+[tasks."linear:create"]
+depends = ["dependencies:manager"]
+usage = """
+arg "<title>" help="Card title"
+arg "<body>" help="Markdown description"
+flag "--column <column>" help="Column name" default="backlog" choices "backlog" "planned" "ready" "working" "review" "approved" "completed" "canceled"
+"""
+run = 'cd manager && bundle exec ruby card.rb create "$usage_title" "$usage_body" "$usage_column"'
+
+[tasks."linear:show"]
+depends = ["dependencies:manager"]
+usage = 'arg "<card>" help="Card identifier, e.g. MOTO-1"'
+run = 'cd manager && bundle exec ruby card.rb show "$usage_card"'
+
+[tasks."linear:move"]
+depends = ["dependencies:manager"]
+usage = """
+arg "<card>" help="Card identifier, e.g. MOTO-1"
+arg "<column>" help="Column name" choices "backlog" "planned" "ready" "working" "review" "approved" "completed" "canceled"
+"""
+run = 'cd manager && bundle exec ruby card.rb move "$usage_card" "$usage_column"'
+
+[tasks."linear:comment"]
+depends = ["dependencies:manager"]
+usage = """
+arg "<card>" help="Card identifier, e.g. MOTO-1"
+arg "<body>" help="Markdown comment body"
+"""
+run = 'cd manager && bundle exec ruby card.rb comment "$usage_card" "$usage_body"'
+
+[tasks."linear:link"]
+depends = ["dependencies:manager"]
+usage = """
+arg "<card>" help="Card identifier, e.g. MOTO-1"
+arg "<url>" help="URL to link"
+arg "[title]" help="Link title"
+"""
+run = 'cd manager && bundle exec ruby card.rb link "$usage_card" "$usage_url" "${usage_title:-}"'
+
+[tasks."linear:tag"]
+depends = ["dependencies:manager"]
+usage = """
+arg "<card>" help="Card identifier, e.g. MOTO-1"
+arg "<tag>" help="Tag name"
+"""
+run = 'cd manager && bundle exec ruby card.rb tag "$usage_card" "$usage_tag"'
+
+[tasks."linear:untag"]
+depends = ["dependencies:manager"]
+usage = """
+arg "<card>" help="Card identifier, e.g. MOTO-1"
+arg "<tag>" help="Tag name"
+"""
+run = 'cd manager && bundle exec ruby card.rb untag "$usage_card" "$usage_tag"'

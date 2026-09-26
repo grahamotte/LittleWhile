@@ -44,22 +44,28 @@ The "Repo Specific" section blow contains rules specific to this repo only.
 
 ## Linear
 
-Work items live in Linear. Use the Linear MCP tools. Never guess a state id.
+Work items are cards in Linear. Use the `mise linear:*` tasks, which call the Linear API with `LINEAR_TOKEN`, `LINEAR_WORKSPACE`, and `LINEAR_TEAM` from the environment. Do not use Linear MCP tools. Refer to cards by identifier, for example `MOTO-1`; take it from the card URL if given one.
 
 Columns, in order: `backlog`, `planned`, `ready`, `working`, `review`, `approved`, `completed`, `canceled`.
 
-Cards being processed have the `working` tag. Remove it when you finish.
+- Create a card: `mise linear:create "<title>" "<markdown body>" [--column backlog]`
+- Read a card, its links, and its comments: `mise linear:show MOTO-1`
+- Move a card: `mise linear:move MOTO-1 review`
+- Comment: `mise linear:comment MOTO-1 "<markdown>"`
+- Link a PR: `mise linear:link MOTO-1 <url> "<title>"`
+- Tag a card: `mise linear:tag MOTO-1 <tag>`
+- Untag a card: `mise linear:untag MOTO-1 <tag>`
 
-- Read a card: `get_issue` with the identifier in the URL (e.g. `MOTO-1`). Then `list_comments` with that issue's `id`.
-- Comment: `save_comment` with `issueId` and `body`.
-- Move a card: `save_issue` with `id` and `state` set to the column name.
-- Link a PR: `save_issue` with `id` and `links: [{ url, title }]`.
-- Tag a card: `save_issue` with `id` and `addedLabels` set to the tag names.
-- Untag a card: `save_issue` with `id` and `removedLabels` set to the tag names.
+Tags:
+
+- `working`: the manager's agent is processing the card. Only add or remove it when a manager prompt tells you to.
+- `interactive`: the card is worked with the user instead of by the manager. The manager does not pick it up from `ready`, but still merges it from `approved`.
+
+When the user hands you a Linear card, use the `interactive-card` skill, unless the prompt says the manager runs the card.
 
 ## GitHub
 
-Open pull requests on GitHub with `gh`, using `GITHUB_TOKEN` from the environment.
+Open pull requests on GitHub with `gh`, using `GITHUB_TOKEN` from the environment. `gh` targets `origin`, the app repo from `GITHUB_REPO`, never `upstream`: `mise merge` and `mise push` set `origin` as the `gh` default, and the `mise` env exports it as `GH_REPO`.
 
 - Push the branch, then `gh pr create`.
 - Merge with `gh pr merge`.
@@ -67,6 +73,7 @@ Open pull requests on GitHub with `gh`, using `GITHUB_TOKEN` from the environmen
 ## File Structure
 
 - `.agents/skills/` - Project-specific agent skills.
+- `.claude/skills` - Symlink to `.agents/skills/` for Claude Code.
 - `.env.*` - Environment configuration and secrets. Do not expose secret values.
 - `apps/` - Mobile apps for iOS and Android.
 - `apps/config.json` - Mobile app release configuration.

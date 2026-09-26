@@ -1,6 +1,7 @@
 class Trigger
   READY = "ready"
   WORKING = "working"
+  INTERACTIVE = "interactive"
   APPROVED = "approved"
   COMPLETED = "completed"
   CANCELED = "canceled"
@@ -14,7 +15,12 @@ class Trigger
           next
         end
 
-        item = items.find { |candidate| !Linear.tagged?(candidate, WORKING) }
+        item = items.find do |candidate|
+          next false if Linear.tagged?(candidate, WORKING)
+          next false if column == READY && Linear.tagged?(candidate, INTERACTIVE)
+
+          true
+        end
         next if item.blank?
 
         case column
@@ -61,6 +67,8 @@ class Trigger
       <<~PROMPT
         Do this Linear issue: #{Linear.url(item)}
 
+        The manager runs this card. Do not use the `interactive-card` skill.
+
         This may be a new card or a kickback with corrections in later comments. There may already be a worktree, commits, and a PR.
 
         1. This session is already in the card worktree. Env files and schema.rb were copied from the main checkout.
@@ -85,9 +93,11 @@ class Trigger
       <<~PROMPT
         This Linear issue is approved: #{Linear.url(item)}
 
+        The manager runs this card. Do not use the `interactive-card` skill.
+
         1. Rebase the GitHub PR on the card. Resolve merge conflicts.
         2. Merge the PR with `gh pr merge` using `GITHUB_TOKEN`.
-        3. Remove any worktrees created for this card.
+        3. If this session is in the main checkout rather than a worktree, run `mise manager:gotomain`.
         4. Move the card to completed.
         5. Remove the working tag.
       PROMPT
