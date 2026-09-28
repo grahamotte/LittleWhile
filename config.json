@@ -1,0 +1,111 @@
+{
+  "domain": "littlewhile.app",
+  "githubRepo": "git@github.com:grahamotte/littlewhile.app.git",
+  "database": "littlewhile",
+  "site": {
+    "title": "Code Moto",
+    "description": "code moto is the base for other projects",
+    "themeColor": "oklch(0 0 0)"
+  },
+  "subdomains": [
+    {
+      "name": "www",
+      "subdomains": [
+        "",
+        "www"
+      ],
+      "directory": "frontend/subdomains/www"
+    },
+    {
+      "name": "hc",
+      "subdomains": [
+        "hc"
+      ],
+      "directory": "frontend/subdomains/hc"
+    },
+    {
+      "name": "jobs",
+      "subdomains": [
+        "jobs"
+      ],
+      "backend": true
+    },
+    {
+      "name": "errors",
+      "subdomains": [
+        "errors"
+      ],
+      "backend": true
+    }
+  ],
+  "instance": {
+    "region": "sfo3",
+    "size": "s-1vcpu-2gb"
+  },
+  "secrets": {
+    "development": "op://Projects/Little While Development/notesPlain",
+    "production": "op://Projects/Little While Production/notesPlain"
+  },
+  "linear": {
+    "workspace": "gotte",
+    "team": "LIT"
+  },
+  "agent": {
+    "runner": "openchamber",
+    "model": "xai/grok-4.6",
+    "variant": "high"
+  },
+  "apps": {
+    "build": "0.3.1",
+    "contactEmail": "go@graham.lol",
+    "contactFirstName": "Graham",
+    "contactLastName": "Otte",
+    "contactPhone": "+1 202 555 0100",
+    "copyright": "2026 Graham Otte",
+    "demoAccountName": "",
+    "demoAccountPassword": "",
+    "demoAccountRequired": false,
+    "description": "Little While is a Pomodoro timer for iPhone.",
+    "keywords": "pomodoro,focus,timer,productivity",
+    "marketingUrl": "https://littlewhile.app",
+    "name": "Little While",
+    "notes": "Little While does not require an account or sign-in.",
+    "primaryLocale": "en-US",
+    "promotionalText": "Focus for a little while.",
+    "releaseType": "AFTER_APPROVAL",
+    "supportUrl": "https://littlewhile.app",
+    "targets": {
+      "apple": {
+        "ios": {
+          "archiveDestination": "generic/platform=iOS",
+          "bundleIdentifier": "app.littlewhile",
+          "bundleIdentifierBuildSetting": "APP_BUNDLE_IDENTIFIER",
+          "platform": "IOS",
+          "project": "apps/apple/App.xcodeproj",
+          "scheme": "App",
+          "screenshots": [
+            {
+              "displayType": "APP_IPHONE_61",
+              "path": "assets/screenshots/iphone-focus.jpg"
+            },
+            {
+              "displayType": "APP_IPHONE_61",
+              "path": "assets/screenshots/iphone-settings.jpg"
+            },
+            {
+              "displayType": "APP_IPHONE_61",
+              "path": "assets/screenshots/iphone-complete.jpg"
+            }
+          ],
+          "simulatorDestination": "generic/platform=iOS Simulator",
+          "simulatorProduct": "Debug-iphonesimulator/App.app",
+          "simulators": {
+            "iphone": "iPhone"
+          }
+        }
+      }
+    },
+    "version": "0.3.1",
+    "whatsNew": "Focus with customizable focus and rest timers, persistent history, completion alerts, Live Activities, the interactive Mr Smiles theme with refined heart and star eyes, and a new timer-face app icon."
+  }
+}
