@@ -4,7 +4,7 @@ Little While is an iPhone-only app for iOS 18 or later. Prepare a release with t
 
 ## Release assets
 
-`config.json` contains the description, keywords, screenshots, App Review contact, and review instructions. The iPhone 6.9-inch screenshot set uses `APP_IPHONE_67`; the supplied iPhone 6.3-inch captures use `APP_IPHONE_61`, the API display group for those devices. The larger screenshot is captured directly from iPhone 17 Pro Max with `mise publish:simulate iphone` and `xcrun simctl io <device-id> screenshot --type=jpeg`.
+`config.json` contains the description, keywords, screenshots, App Review contact, and review instructions. Both iPhone screenshot sets show the focus timer, Mr Smiles theme, settings, and history. The iPhone 6.9-inch set uses `APP_IPHONE_67`; its four images are resized copies of the supplied captures, at 1320 × 2868 pixels. The original iPhone 6.3-inch captures use `APP_IPHONE_61`, the API display group for those devices.
 
 The app includes `PrivacyInfo.xcprivacy` declaring no tracking or collected data and the `CA92.1` reason for accessing its own UserDefaults. Settings links to the public privacy policy.
 
