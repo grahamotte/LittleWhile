@@ -56,24 +56,24 @@
     "variant": "high"
   },
   "apps": {
-    "build": "0.4.0",
+    "build": "0.4.1",
     "contactEmail": "go@graham.lol",
     "contactFirstName": "Graham",
     "contactLastName": "Otte",
-    "contactPhone": "+1 202 555 0100",
+    "contactPhone": "+1 714 227 9963",
     "copyright": "2026 Graham Otte",
     "demoAccountName": "",
     "demoAccountPassword": "",
     "demoAccountRequired": false,
-    "description": "Little While is a Pomodoro timer for iPhone.",
+    "description": "Set aside a little while for what matters.\n\nLittle While is a simple focus and rest timer for iPhone. Choose your durations, pick a theme, and start a small, intentional block of time.\n\n- Customize focus sessions from 1 to 120 minutes and optional rest periods.\n- Choose the clean Boring timer or the playful Mr Smiles theme.\n- Pause and resume whenever you need to.\n- Follow your timer on the Lock Screen and Dynamic Island with Live Activities on supported devices.\n- Get completion alerts with system alarms on iOS 26 or later, or local notifications when permitted.\n- Look back at saved runs and a monthly calendar of your focus time.\n\nNo account, ads, or tracking. Your settings and run history stay on your device.\n\nRequires iOS 18 or later.",
     "keywords": "pomodoro,focus,timer,productivity",
-    "marketingUrl": "https://littlewhile.app",
+    "marketingUrl": "https://github.com/grahamotte/littlewhile.app/blob/master/docs/support.md",
     "name": "Little While",
-    "notes": "Little While does not require an account or sign-in.",
+    "notes": "No account, sign-in, purchases, or network connection is required. Open Settings (sliders button), choose a theme and focus/rest durations, and tap Start. Focus durations range from 1 to 120 minutes; rest can be disabled with 0 minutes. Pause and resume on the main screen. History (clock button) shows saved runs and the monthly activity calendar. The Privacy Policy link is at the bottom of Settings. Completion alerts use AlarmKit on iOS 26 or later when authorized, with local-notification fallback when permitted. Live Activities use Apple's system features on supported devices. Please allow the requested alarm/notification permissions to test background completion alerts.",
     "primaryLocale": "en-US",
     "promotionalText": "Focus for a little while.",
     "releaseType": "AFTER_APPROVAL",
-    "supportUrl": "https://littlewhile.app",
+    "supportUrl": "https://github.com/grahamotte/littlewhile.app/blob/master/docs/support.md",
     "targets": {
       "apple": {
         "ios": {
@@ -85,8 +85,16 @@
           "scheme": "App",
           "screenshots": [
             {
+              "displayType": "APP_IPHONE_67",
+              "path": "assets/screenshots/iphone-large-focus.jpg"
+            },
+            {
               "displayType": "APP_IPHONE_61",
               "path": "assets/screenshots/iphone-focus.jpg"
+            },
+            {
+              "displayType": "APP_IPHONE_61",
+              "path": "assets/screenshots/iphone-mr-smiles.jpg"
             },
             {
               "displayType": "APP_IPHONE_61",
@@ -94,18 +102,18 @@
             },
             {
               "displayType": "APP_IPHONE_61",
-              "path": "assets/screenshots/iphone-complete.jpg"
+              "path": "assets/screenshots/iphone-history.jpg"
             }
           ],
           "simulatorDestination": "generic/platform=iOS Simulator",
           "simulatorProduct": "Debug-iphonesimulator/App.app",
           "simulators": {
-            "iphone": "iPhone"
+            "iphone": "iPhone 17 Pro Max"
           }
         }
       }
     },
-    "version": "0.4.0",
+    "version": "0.4.1",
     "whatsNew": "Focus with customizable focus and rest timers, completion alerts, Live Activities, and playful themes including Mr Smiles. Start a timer directly from settings and track your focus time with saved run history and a monthly activity calendar."
   }
 }
