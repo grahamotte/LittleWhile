@@ -11,6 +11,11 @@ struct RunHistoryView: View {
 
             TimelineView(.periodic(from: .now, by: 1)) { context in
                 List {
+                    MonthlyActivityView(runs: store.runs, date: context.date)
+                        .listRowInsets(EdgeInsets(top: 6, leading: 24, bottom: 18, trailing: 24))
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(Color.clear)
+
                     ForEach(store.visibleRuns(at: context.date)) { run in
                         if run.id == store.currentRun.id {
                             historyRow(run, isCurrent: true, at: context.date)
