@@ -43,6 +43,9 @@ struct RunSettingsView: View {
                         range: 0...120,
                         accessibilityLabel: "Rest duration",
                     )
+                    Link("Privacy Policy", destination: URL(string: "https://github.com/grahamotte/littlewhile.app/blob/master/docs/privacy-policy.md")!)
+                        .font(.footnote)
+                        .padding(.horizontal, 28)
                 }
                 .padding(.top, 20)
                 .padding(.bottom, 32)

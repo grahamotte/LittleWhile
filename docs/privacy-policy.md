@@ -1,6 +1,6 @@
 # Privacy Policy
 
-Effective date: 2026-09-13
+Effective date: 2026-09-29
 
 Little While is a focus timer developed by Graham Otte. Your privacy is simple: Little While does not collect any data.
 
@@ -18,4 +18,4 @@ If this policy changes, the updated version will be posted here with a new effec
 
 ## Contact
 
-If you have questions about this Privacy Policy, contact Graham Otte through the Little While App Store listing.
+If you have questions about this Privacy Policy, email Graham Otte at [go@graham.lol](mailto:go@graham.lol).
