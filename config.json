@@ -56,7 +56,7 @@
     "variant": "high"
   },
   "apps": {
-    "build": "0.3.1",
+    "build": "0.4.0",
     "contactEmail": "go@graham.lol",
     "contactFirstName": "Graham",
     "contactLastName": "Otte",
@@ -105,7 +105,7 @@
         }
       }
     },
-    "version": "0.3.1",
-    "whatsNew": "Focus with customizable focus and rest timers, persistent history, completion alerts, Live Activities, the interactive Mr Smiles theme with refined heart and star eyes, and a new timer-face app icon."
+    "version": "0.4.0",
+    "whatsNew": "Focus with customizable focus and rest timers, completion alerts, Live Activities, and playful themes including Mr Smiles. Start a timer directly from settings and track your focus time with saved run history and a monthly activity calendar."
   }
 }
