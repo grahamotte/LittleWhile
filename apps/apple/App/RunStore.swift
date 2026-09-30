@@ -114,6 +114,11 @@ final class RunStore {
         save()
     }
 
+    func startRun(minutes: Int, theme: String, restMinutes: Int = 0, at date: Date = .now) {
+        createRun(minutes: minutes, theme: theme, restMinutes: restMinutes, at: date)
+        start(at: date)
+    }
+
     func restart(at date: Date = .now) {
         let previous = currentRun
         pause(at: date)

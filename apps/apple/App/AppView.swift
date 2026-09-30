@@ -34,8 +34,8 @@ struct AppView: View {
             switch sheet {
             case .settings:
                 RunSettingsView(currentRun: store.currentRun) { minutes, restMinutes, theme in
-                    store.createRun(minutes: minutes, theme: theme, restMinutes: restMinutes)
-                    synchronizeCompanion()
+                    store.startRun(minutes: minutes, theme: theme, restMinutes: restMinutes)
+                    synchronizeCompanion(userInitiated: true)
                 }
                 .presentationDragIndicator(.visible)
             case .history:

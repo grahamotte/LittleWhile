@@ -10,16 +10,16 @@ struct RunSettingsView: View {
     @State private var visibleRestMinute: Int?
     @State private var didPositionSelectors = false
 
-    let onSet: (Int, Int, String) -> Void
+    let onStart: (Int, Int, String) -> Void
 
-    init(currentRun: FocusRun, onSet: @escaping (Int, Int, String) -> Void) {
+    init(currentRun: FocusRun, onStart: @escaping (Int, Int, String) -> Void) {
         _selectedTheme = State(initialValue: TimerThemes.resolve(currentRun.theme).id)
         _visibleTheme = State(initialValue: nil)
         _selectedMinute = State(initialValue: min(120, max(1, currentRun.goalSeconds / 60)))
         _visibleMinute = State(initialValue: nil)
         _selectedRestMinute = State(initialValue: min(120, max(0, currentRun.restSeconds / 60)))
         _visibleRestMinute = State(initialValue: nil)
-        self.onSet = onSet
+        self.onStart = onStart
     }
 
     var body: some View {
@@ -51,8 +51,8 @@ struct RunSettingsView: View {
         }
         .background(.background)
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            GlassActionButton(title: "Set") {
-                onSet(selectedMinute, selectedRestMinute, selectedTheme)
+            GlassActionButton(title: "Start") {
+                onStart(selectedMinute, selectedRestMinute, selectedTheme)
                 dismiss()
             }
             .frame(maxWidth: .infinity)
