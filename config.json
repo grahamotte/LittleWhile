@@ -43,8 +43,8 @@
     "size": "s-1vcpu-2gb"
   },
   "secrets": {
-    "development": "op://Projects/Little While Development/notesPlain",
-    "production": "op://Projects/Little While Production/notesPlain"
+    "development": "op://Projects/Little While Development",
+    "production": "op://Projects/Little While Production"
   },
   "linear": {
     "workspace": "gotte",
