@@ -51,7 +51,7 @@
     "team": "LIT"
   },
   "apps": {
-    "build": "0.4.2",
+    "build": "0.5.0",
     "contactEmail": "go@graham.lol",
     "contactFirstName": "Graham",
     "contactLastName": "Otte",
@@ -108,7 +108,7 @@
         }
       }
     },
-    "version": "0.4.2",
-    "whatsNew": "Focus with customizable focus and rest timers, completion alerts, Live Activities, and playful themes including Mr Smiles. Start a timer directly from settings and track your focus time with saved run history and a monthly activity calendar. Paused timers now resume automatically after one minute."
+    "version": "0.5.0",
+    "whatsNew": "Focus with customizable focus and rest timers, completion alerts, Live Activities, and playful themes including Mr Smiles. Start a timer directly from settings and track your focus time with saved run history and a monthly activity calendar. Paused timers now resume automatically after one minute. Focus and rest cycles now repeat until you stop them, and history and settings are hidden while a run is active."
   }
 }
