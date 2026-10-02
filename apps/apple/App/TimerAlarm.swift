@@ -97,6 +97,7 @@ final class TimerAlarm {
 
     private func reconcile(run: FocusRun, generation currentGeneration: Int) async -> TimerAlarmCoverage {
         guard let manager else { return .unavailable }
+        let run = run.resumingAtPauseDeadline()
 
         var authorization = manager.authorizationState
         let canPrompt = shouldRequestPermission
@@ -165,14 +166,15 @@ final class TimerAlarm {
     private func needed(run: FocusRun, at date: Date) -> [(id: UUID, deadline: Date, phase: TimerAlarmPhase)] {
         guard run.isRunning, !run.isComplete(at: date) else { return [] }
         var alarms: [(id: UUID, deadline: Date, phase: TimerAlarmPhase)] = []
+        let delay = run.resumeDelay(at: date)
         let focusRemaining = run.focusRemaining(at: date)
         if focusRemaining > 0 {
-            alarms.append((run.id, date.addingTimeInterval(focusRemaining), .focus))
+            alarms.append((run.id, date.addingTimeInterval(delay + focusRemaining), .focus))
         }
         if run.restSeconds > 0 {
             let totalRemaining = run.remaining(at: date)
             if totalRemaining > 0 {
-                alarms.append((run.restAlarmID, date.addingTimeInterval(totalRemaining), .rest))
+                alarms.append((run.restAlarmID, date.addingTimeInterval(delay + totalRemaining), .rest))
             }
         }
         return alarms

@@ -81,7 +81,8 @@ final class TimerLiveActivity {
         }
     }
 
-    private func reconcile(run: FocusRun, generation currentGeneration: Int) async {
+    private func reconcile(run source: FocusRun, generation currentGeneration: Int) async {
+        let run = source.autoResumed(at: now())
         guard !finishedRunIDs.contains(run.id) else { return }
         let activities = client.activities
         let matching = activities.first { $0.attributes.runID == run.id && $0.isActive }

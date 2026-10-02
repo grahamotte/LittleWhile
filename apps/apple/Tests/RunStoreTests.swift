@@ -420,13 +420,27 @@ final class RunStoreTests: XCTestCase {
         }
     }
 
+    func testRelaunchAfterPauseWindowResumesFromDeadline() async {
+        withDefaults { defaults in
+            let store = RunStore(defaults: defaults, now: date)
+            store.start(at: date)
+            store.pause(at: date.addingTimeInterval(10))
+
+            let restored = RunStore(defaults: defaults, now: date.addingTimeInterval(100))
+
+            XCTAssertTrue(restored.currentRun.isRunning)
+            XCTAssertNil(restored.currentRun.pausedAt)
+            XCTAssertEqual(restored.currentRun.elapsed(at: date.addingTimeInterval(100)), 40)
+        }
+    }
+
     func testPausedRunDoesNotAccumulateDuringRelaunch() async {
         withDefaults { defaults in
             let store = RunStore(defaults: defaults, now: date)
             store.start(at: date)
             store.pause(at: date.addingTimeInterval(13.125))
 
-            let restored = RunStore(defaults: defaults, now: date.addingTimeInterval(10_000))
+            let restored = RunStore(defaults: defaults, now: date.addingTimeInterval(30))
 
             XCTAssertEqual(restored.currentRun, store.currentRun)
             XCTAssertEqual(restored.currentRun.progressSeconds, 13.125)
@@ -576,5 +590,49 @@ final class RunStoreTests: XCTestCase {
     private func savedRuns(_ defaults: UserDefaults) throws -> [FocusRun] {
         let data = try XCTUnwrap(defaults.data(forKey: storageKey))
         return try JSONDecoder().decode([FocusRun].self, from: data)
+    }
+
+    func testPauseOpensWindowAndRefreshAutoResumesAtDeadline() async {
+        withDefaults { defaults in
+            let store = RunStore(defaults: defaults, now: date)
+
+            store.start(at: date)
+            store.pause(at: date.addingTimeInterval(10))
+            XCTAssertEqual(store.currentRun.pausedAt, date.addingTimeInterval(10))
+
+            store.refresh(at: date.addingTimeInterval(40))
+            XCTAssertFalse(store.currentRun.isRunning)
+
+            store.refresh(at: date.addingTimeInterval(100))
+            XCTAssertTrue(store.currentRun.isRunning)
+            XCTAssertNil(store.currentRun.pausedAt)
+            XCTAssertEqual(store.currentRun.elapsed(at: date.addingTimeInterval(100)), 40)
+        }
+    }
+
+    func testManualResumeClearsPauseWindow() async {
+        withDefaults { defaults in
+            let store = RunStore(defaults: defaults, now: date)
+
+            store.start(at: date)
+            store.pause(at: date.addingTimeInterval(10))
+            store.start(at: date.addingTimeInterval(20))
+
+            XCTAssertNil(store.currentRun.pausedAt)
+            XCTAssertTrue(store.currentRun.isRunning)
+        }
+    }
+
+    func testNewRunDoesNotLeavePauseWindowOnHistory() async {
+        withDefaults { defaults in
+            let store = RunStore(defaults: defaults, now: date)
+
+            store.start(at: date)
+            store.pause(at: date.addingTimeInterval(10))
+            store.createRun(minutes: 5, theme: "boring", at: date.addingTimeInterval(20))
+
+            XCTAssertNil(store.history[0].pausedAt)
+            XCTAssertNil(store.currentRun.pausedAt)
+        }
     }
 }

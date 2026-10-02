@@ -48,12 +48,19 @@ final class RunStore {
                 if let resumedAt = run.resumedAt, resumedAt > now {
                     run.resumedAt = now
                 }
+                if let pausedAt = run.pausedAt, !pausedAt.timeIntervalSinceReferenceDate.isFinite || pausedAt > now || run.isRunning {
+                    run.pausedAt = nil
+                }
                 if run.startedAt == nil, run.progressSeconds > 0 || run.isRunning {
                     run.startedAt = run.createdAt
                 }
                 if let newerRun = restored.last, run.isRunning {
                     run.progressSeconds = run.elapsed(at: min(now, newerRun.createdAt))
                     run.resumedAt = nil
+                    run.pausedAt = nil
+                }
+                if !restored.isEmpty {
+                    run.pausedAt = nil
                 }
                 restored.append(run)
             }
@@ -71,13 +78,23 @@ final class RunStore {
             runs[0].startedAt = date
         }
         runs[0].resumedAt = date
+        runs[0].pausedAt = nil
         save()
     }
 
     func pause(at date: Date = .now) {
+        let wasRunning = currentRun.isRunning
+        halt(at: date)
+        if wasRunning, !currentRun.isComplete(at: date) {
+            runs[0].pausedAt = date
+        }
+        save()
+    }
+
+    private func halt(at date: Date) {
         runs[0].progressSeconds = currentRun.elapsed(at: date)
         runs[0].resumedAt = nil
-        save()
+        runs[0].pausedAt = nil
     }
 
     func toggle(at date: Date = .now) {
@@ -89,9 +106,11 @@ final class RunStore {
     }
 
     func refresh(at date: Date = .now) {
+        runs[0] = currentRun.autoResumed(at: date)
         if currentRun.isComplete(at: date) {
             runs[0].progressSeconds = TimeInterval(currentRun.totalSeconds)
             runs[0].resumedAt = nil
+            runs[0].pausedAt = nil
         } else if let resumedAt = currentRun.resumedAt, date >= resumedAt {
             runs[0].progressSeconds = currentRun.elapsed(at: date)
             runs[0].resumedAt = date
@@ -100,7 +119,7 @@ final class RunStore {
     }
 
     func createRun(minutes: Int, theme: String, restMinutes: Int = 0, at date: Date = .now) {
-        pause(at: date)
+        halt(at: date)
         let selectedTheme = theme.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "boring" : theme
         runs.insert(
             FocusRun(
@@ -121,7 +140,7 @@ final class RunStore {
 
     func restart(at date: Date = .now) {
         let previous = currentRun
-        pause(at: date)
+        halt(at: date)
         runs.insert(
             FocusRun(
                 createdAt: date,

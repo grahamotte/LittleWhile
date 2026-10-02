@@ -9,6 +9,9 @@ struct FocusRun: Identifiable, Equatable {
     var restSeconds: Int = 0
     var theme: String = "boring"
     var resumedAt: Date?
+    var pausedAt: Date?
+
+    static let pauseWindow: TimeInterval = 60
 
     init(
         id: UUID = UUID(),
@@ -19,6 +22,7 @@ struct FocusRun: Identifiable, Equatable {
         restSeconds: Int = 0,
         theme: String = "boring",
         resumedAt: Date? = nil,
+        pausedAt: Date? = nil,
     ) {
         self.id = id
         self.createdAt = createdAt
@@ -28,10 +32,39 @@ struct FocusRun: Identifiable, Equatable {
         self.restSeconds = restSeconds
         self.theme = theme
         self.resumedAt = resumedAt
+        self.pausedAt = pausedAt
     }
 
     var isRunning: Bool {
         resumedAt != nil
+    }
+
+    var pauseDeadline: Date? {
+        guard !isRunning, let pausedAt else { return nil }
+        return pausedAt.addingTimeInterval(Self.pauseWindow)
+    }
+
+    func pauseRemaining(at date: Date) -> TimeInterval? {
+        guard let deadline = pauseDeadline, deadline > date, !isComplete(at: date) else { return nil }
+        return deadline.timeIntervalSince(date)
+    }
+
+    func autoResumed(at date: Date) -> FocusRun {
+        guard let deadline = pauseDeadline, deadline <= date else { return self }
+        return resumingAtPauseDeadline()
+    }
+
+    func resumingAtPauseDeadline() -> FocusRun {
+        guard let deadline = pauseDeadline else { return self }
+        var run = self
+        run.resumedAt = deadline
+        run.pausedAt = nil
+        return run
+    }
+
+    func resumeDelay(at date: Date) -> TimeInterval {
+        guard let resumedAt else { return 0 }
+        return max(0, resumedAt.timeIntervalSince(date))
     }
 
     var hasStarted: Bool {
@@ -108,6 +141,7 @@ extension FocusRun: Codable {
         case restSeconds
         case theme
         case resumedAt
+        case pausedAt
     }
 
     init(from decoder: Decoder) throws {
@@ -120,5 +154,6 @@ extension FocusRun: Codable {
         restSeconds = try container.decodeIfPresent(Int.self, forKey: .restSeconds) ?? 0
         theme = try container.decode(String.self, forKey: .theme)
         resumedAt = try container.decodeIfPresent(Date.self, forKey: .resumedAt)
+        pausedAt = try container.decodeIfPresent(Date.self, forKey: .pausedAt)
     }
 }
