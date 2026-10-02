@@ -99,13 +99,10 @@ final class TimerAlarmTests: XCTestCase {
     func testStoppingALoopCancelsUpcomingAlarms() async {
         let manager = AlarmManagerBoundary()
         let alarm = TimerAlarm(manager: manager, now: { self.date })
-        var run = FocusRun(startedAt: date, goalSeconds: 300, restSeconds: 60, resumedAt: date, loops: true)
+        let run = FocusRun(startedAt: date, goalSeconds: 300, restSeconds: 60, resumedAt: date, loops: true)
         _ = await alarm.synchronize(run: run)
-        run.progressSeconds = 30
-        run.resumedAt = nil
-        run.stoppedAt = date
 
-        let covered = await alarm.synchronize(run: run)
+        let covered = await alarm.synchronize(run: FocusRun(createdAt: date, goalSeconds: 300, restSeconds: 60, loops: true))
 
         XCTAssertEqual(covered, .unavailable)
         XCTAssertTrue(manager.records.isEmpty)

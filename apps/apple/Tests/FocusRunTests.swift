@@ -238,15 +238,6 @@ final class FocusRunTests: XCTestCase {
         XCTAssertFalse(run.isResting(at: date.addingTimeInterval(150)))
     }
 
-    func testStoppedRunIsCompleteAndFrozen() {
-        let run = FocusRun(createdAt: date, startedAt: date, progressSeconds: 400, goalSeconds: 300, restSeconds: 60, loops: true, stoppedAt: date)
-
-        XCTAssertTrue(run.isComplete(at: date))
-        XCTAssertFalse(run.isResting(at: date))
-        XCTAssertEqual(run.elapsed(at: date.addingTimeInterval(500)), 400)
-        XCTAssertNil(FocusRun(createdAt: date, startedAt: date, progressSeconds: 10, pausedAt: date, stoppedAt: date).pauseRemaining(at: date))
-    }
-
     func testAlarmIdentifiersAreStableAndDistinctPerCycle() {
         let run = FocusRun(createdAt: date)
 
@@ -257,16 +248,14 @@ final class FocusRunTests: XCTestCase {
         XCTAssertEqual(Set(identifiers).count, 8)
     }
 
-    func testLoopAndStopRoundTripAndDefaultWhenMissing() throws {
-        let run = FocusRun(createdAt: date, startedAt: date, progressSeconds: 5, loops: true, stoppedAt: date)
+    func testLoopRoundTripsAndDefaultsWhenMissing() throws {
+        let run = FocusRun(createdAt: date, startedAt: date, progressSeconds: 5, loops: true)
         let decoded = try JSONDecoder().decode(FocusRun.self, from: JSONEncoder().encode(run))
         XCTAssertEqual(decoded, run)
 
         var object = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(run)) as? [String: Any])
         object.removeValue(forKey: "loops")
-        object.removeValue(forKey: "stoppedAt")
         let legacy = try JSONDecoder().decode(FocusRun.self, from: JSONSerialization.data(withJSONObject: object))
         XCTAssertFalse(legacy.loops)
-        XCTAssertNil(legacy.stoppedAt)
     }
 }

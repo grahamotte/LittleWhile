@@ -38,10 +38,9 @@ final class TimerSnapshotTests: XCTestCase {
         XCTAssertTrue(paused.canStop)
         XCTAssertEqual(paused.stopLabel, "Stop timer")
         XCTAssertEqual(paused.cycle, 0)
-        let stopped = TimerSnapshot(run: FocusRun(createdAt: date, startedAt: date, progressSeconds: 10, loops: true, stoppedAt: date), at: date)
-        XCTAssertEqual(stopped.status, .complete)
-        XCTAssertFalse(stopped.canStop)
-        XCTAssertEqual(stopped.controlSymbol, "arrow.counterclockwise")
+        let complete = TimerSnapshot(run: FocusRun(createdAt: date, startedAt: date, progressSeconds: 1_500), at: date)
+        XCTAssertEqual(complete.status, .complete)
+        XCTAssertFalse(complete.canStop)
     }
 
     func testRunningSnapshotRoundsRemainingTimeUp() {

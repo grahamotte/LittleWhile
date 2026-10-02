@@ -11,7 +11,6 @@ struct FocusRun: Identifiable, Equatable {
     var resumedAt: Date?
     var pausedAt: Date?
     var loops: Bool = false
-    var stoppedAt: Date?
 
     static let pauseWindow: TimeInterval = 60
 
@@ -26,7 +25,6 @@ struct FocusRun: Identifiable, Equatable {
         resumedAt: Date? = nil,
         pausedAt: Date? = nil,
         loops: Bool = false,
-        stoppedAt: Date? = nil,
     ) {
         self.id = id
         self.createdAt = createdAt
@@ -38,7 +36,6 @@ struct FocusRun: Identifiable, Equatable {
         self.resumedAt = resumedAt
         self.pausedAt = pausedAt
         self.loops = loops
-        self.stoppedAt = stoppedAt
     }
 
     var isRunning: Bool {
@@ -171,10 +168,7 @@ struct FocusRun: Identifiable, Equatable {
     }
 
     func isComplete(at date: Date) -> Bool {
-        if stoppedAt != nil {
-            return true
-        }
-        return !loops && elapsed(at: date) >= TimeInterval(totalSeconds)
+        !loops && elapsed(at: date) >= TimeInterval(totalSeconds)
     }
 }
 
@@ -190,7 +184,6 @@ extension FocusRun: Codable {
         case resumedAt
         case pausedAt
         case loops
-        case stoppedAt
     }
 
     init(from decoder: Decoder) throws {
@@ -205,6 +198,5 @@ extension FocusRun: Codable {
         resumedAt = try container.decodeIfPresent(Date.self, forKey: .resumedAt)
         pausedAt = try container.decodeIfPresent(Date.self, forKey: .pausedAt)
         loops = try container.decodeIfPresent(Bool.self, forKey: .loops) ?? false
-        stoppedAt = try container.decodeIfPresent(Date.self, forKey: .stoppedAt)
     }
 }

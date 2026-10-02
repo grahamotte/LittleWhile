@@ -49,12 +49,6 @@ final class RunStore {
                 if let resumedAt = run.resumedAt, !resumedAt.timeIntervalSinceReferenceDate.isFinite {
                     run.resumedAt = nil
                 }
-                if let stoppedAt = run.stoppedAt, !stoppedAt.timeIntervalSinceReferenceDate.isFinite {
-                    run.stoppedAt = nil
-                }
-                if run.stoppedAt != nil {
-                    run.resumedAt = nil
-                }
                 if let resumedAt = run.resumedAt, resumedAt > now {
                     run.resumedAt = now
                 }
@@ -113,9 +107,7 @@ final class RunStore {
             return
         }
         runs[0] = currentRun.autoResumed(at: date)
-        halt(at: date)
-        runs[0].stoppedAt = date
-        save()
+        restart(at: date)
     }
 
     func toggle(at date: Date = .now) {
@@ -129,9 +121,7 @@ final class RunStore {
     func refresh(at date: Date = .now) {
         runs[0] = currentRun.autoResumed(at: date)
         if currentRun.isComplete(at: date) {
-            if currentRun.stoppedAt == nil {
-                runs[0].progressSeconds = TimeInterval(currentRun.totalSeconds)
-            }
+            runs[0].progressSeconds = TimeInterval(currentRun.totalSeconds)
             runs[0].resumedAt = nil
             runs[0].pausedAt = nil
         } else if let resumedAt = currentRun.resumedAt, date >= resumedAt {

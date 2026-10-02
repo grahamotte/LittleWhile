@@ -82,7 +82,7 @@ struct AppView: View {
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("Your progress will stay in History.")
+            Text("Your progress will stay in History. A fresh run with the same times and theme will be ready to start.")
         }
         .alert("Alarm couldn’t be confirmed", isPresented: Binding(
             get: { companion?.alarmIssue != nil },

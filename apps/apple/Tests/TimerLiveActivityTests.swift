@@ -46,18 +46,14 @@ final class TimerLiveActivityTests: XCTestCase {
     func testStoppingALoopEndsItsActivity() async throws {
         let client = ActivityBoundary()
         let coordinator = TimerLiveActivity(client: client, now: { self.date })
-        var run = FocusRun(startedAt: date, goalSeconds: 300, restSeconds: 60, resumedAt: date, loops: true)
+        let run = FocusRun(startedAt: date, goalSeconds: 300, restSeconds: 60, resumedAt: date, loops: true)
         await coordinator.synchronize(run: run, userInitiated: true)
-        run.progressSeconds = 100
-        run.resumedAt = nil
-        run.stoppedAt = date
 
-        await coordinator.synchronize(run: run)
+        await coordinator.synchronize(run: FocusRun(createdAt: date, goalSeconds: 300, restSeconds: 60, loops: true))
 
-        let ending = try XCTUnwrap(client.endings.first)
-        XCTAssertTrue(ending.state.isComplete)
-        XCTAssertNil(ending.state.deadline)
+        XCTAssertEqual(client.endings.count, 1)
         XCTAssertTrue(client.activities.isEmpty)
+        XCTAssertEqual(client.requests.count, 1)
     }
 
     func testUnstartedPausedAndCompletedRunsDoNotCreateActivities() async {

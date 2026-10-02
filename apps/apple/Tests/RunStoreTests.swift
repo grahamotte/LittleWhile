@@ -615,21 +615,25 @@ final class RunStoreTests: XCTestCase {
         }
     }
 
-    func testStopEndsRunAndKeepsProgress() async throws {
+    func testStopArchivesRunAndLeavesFreshReadyRunWithSameSettings() async throws {
         try withDefaults { defaults in
             let store = RunStore(defaults: defaults, now: date)
-            store.startRun(minutes: 5, theme: "boring", restMinutes: 1, loops: true, at: date)
+            store.startRun(minutes: 5, theme: "garden", restMinutes: 1, loops: true, at: date)
+            let stoppedID = store.currentRun.id
 
             store.stop(at: date.addingTimeInterval(500))
-            store.refresh(at: date.addingTimeInterval(900))
-            store.start(at: date.addingTimeInterval(950))
 
-            XCTAssertEqual(store.currentRun.stoppedAt, date.addingTimeInterval(500))
-            XCTAssertEqual(store.currentRun.progressSeconds, 500)
-            XCTAssertFalse(store.currentRun.isRunning)
-            XCTAssertTrue(store.currentRun.isComplete(at: date.addingTimeInterval(900)))
+            XCTAssertNotEqual(store.currentRun.id, stoppedID)
+            XCTAssertFalse(store.currentRun.hasStarted)
+            XCTAssertFalse(store.currentRun.isComplete(at: date.addingTimeInterval(500)))
+            XCTAssertEqual(store.currentRun.goalSeconds, 300)
+            XCTAssertEqual(store.currentRun.restSeconds, 60)
+            XCTAssertEqual(store.currentRun.theme, "garden")
+            XCTAssertTrue(store.currentRun.loops)
+            XCTAssertEqual(store.history[0].id, stoppedID)
+            XCTAssertEqual(store.history[0].progressSeconds, 500)
+            XCTAssertFalse(store.history[0].isRunning)
             XCTAssertEqual(try savedRuns(defaults), store.runs)
-            XCTAssertEqual(RunStore(defaults: defaults, now: date.addingTimeInterval(1_000)).currentRun, store.currentRun)
         }
     }
 
@@ -641,23 +645,25 @@ final class RunStoreTests: XCTestCase {
 
             store.stop(at: date.addingTimeInterval(200))
 
-            XCTAssertEqual(store.currentRun.progressSeconds, 140)
-            XCTAssertNil(store.currentRun.pausedAt)
-            XCTAssertNotNil(store.currentRun.stoppedAt)
+            XCTAssertEqual(store.history[0].progressSeconds, 140)
+            XCTAssertNil(store.history[0].pausedAt)
+            XCTAssertFalse(store.currentRun.hasStarted)
         }
     }
 
     func testStopIgnoresReadyAndCompletedRuns() async {
         withDefaults { defaults in
             let store = RunStore(defaults: defaults, now: date)
+            let readyID = store.currentRun.id
             store.stop(at: date)
-            XCTAssertNil(store.currentRun.stoppedAt)
+            XCTAssertEqual(store.currentRun.id, readyID)
 
             store.createRun(minutes: 1, theme: "boring", at: date)
+            let completedID = store.currentRun.id
             store.start(at: date)
             store.stop(at: date.addingTimeInterval(120))
 
-            XCTAssertNil(store.currentRun.stoppedAt)
+            XCTAssertEqual(store.currentRun.id, completedID)
             XCTAssertEqual(store.currentRun.progressSeconds, 60)
         }
     }
