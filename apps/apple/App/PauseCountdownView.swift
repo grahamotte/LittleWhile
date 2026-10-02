@@ -57,8 +57,8 @@ struct PauseWedge: Shape {
         path.addArc(
             center: center,
             radius: radius,
-            startAngle: .degrees(-90),
-            endAngle: .degrees(-90 + 360 * min(1, fraction)),
+            startAngle: .degrees(-90 + 360 * (1 - min(1, fraction))),
+            endAngle: .degrees(270),
             clockwise: false,
         )
         path.closeSubpath()
