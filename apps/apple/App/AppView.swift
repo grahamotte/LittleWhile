@@ -109,11 +109,15 @@ struct AppView: View {
 
     private func controls(snapshot: TimerSnapshot) -> some View {
         HStack(spacing: 12) {
-            GlassIconButton(symbol: "clock.arrow.circlepath", label: "History") {
-                sheet = .history
-            }
-            GlassIconButton(symbol: "slider.horizontal.3", label: "Run settings") {
-                sheet = .settings
+            if !snapshot.canStop {
+                GlassIconButton(symbol: "clock.arrow.circlepath", label: "History") {
+                    sheet = .history
+                }
+                .transition(.scale.combined(with: .opacity))
+                GlassIconButton(symbol: "slider.horizontal.3", label: "Run settings") {
+                    sheet = .settings
+                }
+                .transition(.scale.combined(with: .opacity))
             }
             Spacer()
             if snapshot.canStop {
