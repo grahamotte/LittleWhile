@@ -89,7 +89,8 @@ final class CompletionAlerts: NSObject, UNUserNotificationCenterDelegate {
         [.banner, .sound]
     }
 
-    private func schedule(run: FocusRun, generation currentGeneration: Int) async {
+    private func schedule(run source: FocusRun, generation currentGeneration: Int) async {
+        let run = source.resumingAtPauseDeadline()
         center.removePendingNotificationRequests(withIdentifiers: Self.identifiers)
         guard isEnabled, run.isRunning, run.remaining(at: now()) > 0 else { return }
 
@@ -117,12 +118,13 @@ final class CompletionAlerts: NSObject, UNUserNotificationCenterDelegate {
         guard currentGeneration == generation, isAuthorized else { return }
 
         let sampledAt = now()
-        let totalRemaining = run.remaining(at: sampledAt)
+        let delay = run.resumeDelay(at: sampledAt)
+        let totalRemaining = run.remaining(at: sampledAt) + delay
         guard totalRemaining > 0 else { return }
 
         if run.restSeconds > 0 {
-            let focusRemaining = run.focusRemaining(at: sampledAt)
-            if focusRemaining > 0 {
+            let focusRemaining = run.focusRemaining(at: sampledAt) + delay
+            if run.focusRemaining(at: sampledAt) > 0 {
                 let focus = UNMutableNotificationContent()
                 focus.title = "Focus is up"
                 focus.body = "Time for a rest."

@@ -18,8 +18,11 @@ struct TimerSnapshot: Equatable {
     let progress: Double
     let isResting: Bool
     let status: Status
+    let pauseRemainingSeconds: TimeInterval?
+    let pauseWindowSeconds: TimeInterval
 
-    init(run: FocusRun, at date: Date) {
+    init(run source: FocusRun, at date: Date) {
+        let run = source.autoResumed(at: date)
         runID = run.id
         sampledAt = date
         goalSeconds = run.goalSeconds
@@ -29,6 +32,8 @@ struct TimerSnapshot: Equatable {
         remainingSeconds = run.periodRemaining(at: date)
         progress = run.periodProgress(at: date)
         isResting = run.isResting(at: date)
+        pauseRemainingSeconds = run.pauseRemaining(at: date)
+        pauseWindowSeconds = FocusRun.pauseWindow
         if run.isComplete(at: date) {
             status = .complete
         } else if run.isRunning {

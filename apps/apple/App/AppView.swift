@@ -19,12 +19,25 @@ struct AppView: View {
 
             theme.screen(snapshot)
                 .environment(\.colorScheme, theme.colorScheme)
+                .overlay {
+                    if let remaining = snapshot.pauseRemainingSeconds {
+                        PauseCountdownView(remaining: remaining, window: snapshot.pauseWindowSeconds)
+                            .environment(\.colorScheme, theme.colorScheme)
+                            .transition(.opacity)
+                    }
+                }
+                .animation(.easeInOut(duration: 0.2), value: snapshot.pauseRemainingSeconds != nil)
                 .overlay(alignment: .top) {
                     controls(snapshot: snapshot)
                         .environment(\.colorScheme, theme.colorScheme)
                 }
                 .onChange(of: snapshot.status, initial: true) { _, status in
                     handleCompletion(snapshot)
+                }
+                .onChange(of: snapshot.status) { _, status in
+                    guard status == .running, !store.currentRun.isRunning else { return }
+                    store.refresh()
+                    synchronizeCompanion()
                 }
                 .sensoryFeedback(.success, trigger: snapshot.status == .complete) { _, completed in
                     completed

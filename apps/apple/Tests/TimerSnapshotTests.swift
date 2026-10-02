@@ -75,4 +75,18 @@ final class TimerSnapshotTests: XCTestCase {
         XCTAssertEqual(complete.clockText, "00:00")
         XCTAssertEqual(complete.progress, 1)
     }
+
+    func testPauseWindowShowsCountdownThenResumes() {
+        let run = FocusRun(createdAt: date, startedAt: date, progressSeconds: 100, goalSeconds: 600, pausedAt: date)
+
+        let paused = TimerSnapshot(run: run, at: date.addingTimeInterval(20))
+        XCTAssertEqual(paused.status, .paused)
+        XCTAssertEqual(paused.pauseRemainingSeconds, 40)
+        XCTAssertEqual(paused.pauseWindowSeconds, 60)
+
+        let resumed = TimerSnapshot(run: run, at: date.addingTimeInterval(70))
+        XCTAssertEqual(resumed.status, .running)
+        XCTAssertNil(resumed.pauseRemainingSeconds)
+        XCTAssertEqual(resumed.elapsedSeconds, 110)
+    }
 }

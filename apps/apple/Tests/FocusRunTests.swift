@@ -160,4 +160,42 @@ final class FocusRunTests: XCTestCase {
         XCTAssertTrue(run.isComplete(at: date.addingTimeInterval(60)))
         XCTAssertEqual(run.periodProgress(at: date.addingTimeInterval(60)), 1)
     }
+
+    func testPauseWindowCountsDownThenAutoResumesFromDeadline() {
+        let run = FocusRun(createdAt: date, startedAt: date, progressSeconds: 100, goalSeconds: 600, pausedAt: date)
+
+        XCTAssertEqual(run.pauseDeadline, date.addingTimeInterval(60))
+        XCTAssertEqual(run.pauseRemaining(at: date.addingTimeInterval(15)), 45)
+        XCTAssertNil(run.pauseRemaining(at: date.addingTimeInterval(60)))
+        XCTAssertEqual(run.autoResumed(at: date.addingTimeInterval(30)), run)
+
+        let resumed = run.autoResumed(at: date.addingTimeInterval(90))
+        XCTAssertTrue(resumed.isRunning)
+        XCTAssertNil(resumed.pausedAt)
+        XCTAssertEqual(resumed.elapsed(at: date.addingTimeInterval(90)), 130)
+    }
+
+    func testResumingAtPauseDeadlineFreezesProgressUntilDeadline() {
+        let run = FocusRun(createdAt: date, startedAt: date, progressSeconds: 100, goalSeconds: 600, pausedAt: date)
+        let forecast = run.resumingAtPauseDeadline()
+
+        XCTAssertEqual(forecast.elapsed(at: date.addingTimeInterval(30)), 100)
+        XCTAssertEqual(forecast.resumeDelay(at: date.addingTimeInterval(30)), 30)
+        XCTAssertEqual(forecast.resumeDelay(at: date.addingTimeInterval(90)), 0)
+        let idle = FocusRun(createdAt: date)
+        XCTAssertEqual(idle.resumingAtPauseDeadline(), idle)
+    }
+
+    func testRunningRunHasNoPauseDeadline() {
+        let run = FocusRun(createdAt: date, startedAt: date, resumedAt: date, pausedAt: date)
+
+        XCTAssertNil(run.pauseDeadline)
+    }
+
+    func testPausedAtRoundTripsThroughCodable() throws {
+        let run = FocusRun(createdAt: date, startedAt: date, progressSeconds: 5, pausedAt: date)
+        let decoded = try JSONDecoder().decode(FocusRun.self, from: JSONEncoder().encode(run))
+
+        XCTAssertEqual(decoded, run)
+    }
 }
