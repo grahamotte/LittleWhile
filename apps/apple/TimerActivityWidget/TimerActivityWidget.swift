@@ -117,6 +117,14 @@ private struct TimerActivityView {
     let context: ActivityViewContext<TimerActivityAttributes>
     let now: Date
 
+    var deadline: Date? {
+        guard let deadline = context.state.deadline else { return nil }
+        let cycle = Double(context.attributes.goalSeconds + context.attributes.restSeconds)
+        guard context.attributes.loops, !context.state.isPaused, cycle > 0, deadline <= now else { return deadline }
+        let cycles = (now.timeIntervalSince(deadline) / cycle).rounded(.down) + 1
+        return deadline.addingTimeInterval(cycles * cycle)
+    }
+
     var hasFinished: Bool {
         if context.state.isComplete || (context.isStale && !context.state.isPaused) {
             return true
@@ -124,7 +132,7 @@ private struct TimerActivityView {
         if context.state.isPaused {
             return false
         }
-        if let deadline = context.state.deadline {
+        if let deadline {
             return deadline <= now
         }
         return context.state.remainingSeconds <= 0
@@ -132,7 +140,7 @@ private struct TimerActivityView {
 
     var isResting: Bool {
         guard !hasFinished, context.attributes.restSeconds > 0 else { return false }
-        if let deadline = context.state.deadline {
+        if let deadline {
             return now >= deadline.addingTimeInterval(-Double(context.attributes.restSeconds))
         }
         return context.state.remainingSeconds <= Double(context.attributes.restSeconds)
@@ -143,7 +151,7 @@ private struct TimerActivityView {
     }
 
     var periodDeadline: Date? {
-        guard let deadline = context.state.deadline else { return nil }
+        guard let deadline else { return nil }
         if isResting || context.attributes.restSeconds <= 0 {
             return deadline
         }

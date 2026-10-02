@@ -30,9 +30,13 @@ final class RunStore {
                 guard var run = record.run, identifiers.insert(run.id).inserted else { continue }
                 run.goalSeconds = min(120 * 60, max(60, run.goalSeconds))
                 run.restSeconds = min(120 * 60, max(0, run.restSeconds))
-                run.progressSeconds = run.progressSeconds.isFinite
-                    ? min(TimeInterval(run.totalSeconds), max(0, run.progressSeconds))
-                    : 0
+                if !run.progressSeconds.isFinite {
+                    run.progressSeconds = 0
+                } else if run.loops {
+                    run.progressSeconds = max(0, run.progressSeconds)
+                } else {
+                    run.progressSeconds = min(TimeInterval(run.totalSeconds), max(0, run.progressSeconds))
+                }
                 if run.theme.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || run.theme == "standard" {
                     run.theme = "boring"
                 }
@@ -97,6 +101,15 @@ final class RunStore {
         runs[0].pausedAt = nil
     }
 
+    func stop(at date: Date = .now) {
+        guard currentRun.hasStarted, !currentRun.isComplete(at: date) else {
+            refresh(at: date)
+            return
+        }
+        runs[0] = currentRun.autoResumed(at: date)
+        restart(at: date)
+    }
+
     func toggle(at date: Date = .now) {
         if currentRun.isRunning {
             pause(at: date)
@@ -118,7 +131,7 @@ final class RunStore {
         save()
     }
 
-    func createRun(minutes: Int, theme: String, restMinutes: Int = 0, at date: Date = .now) {
+    func createRun(minutes: Int, theme: String, restMinutes: Int = 0, loops: Bool = false, at date: Date = .now) {
         halt(at: date)
         let selectedTheme = theme.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "boring" : theme
         runs.insert(
@@ -127,14 +140,15 @@ final class RunStore {
                 goalSeconds: min(120, max(1, minutes)) * 60,
                 restSeconds: min(120, max(0, restMinutes)) * 60,
                 theme: selectedTheme,
+                loops: loops,
             ),
             at: 0,
         )
         save()
     }
 
-    func startRun(minutes: Int, theme: String, restMinutes: Int = 0, at date: Date = .now) {
-        createRun(minutes: minutes, theme: theme, restMinutes: restMinutes, at: date)
+    func startRun(minutes: Int, theme: String, restMinutes: Int = 0, loops: Bool = false, at date: Date = .now) {
+        createRun(minutes: minutes, theme: theme, restMinutes: restMinutes, loops: loops, at: date)
         start(at: date)
     }
 
@@ -147,6 +161,7 @@ final class RunStore {
                 goalSeconds: previous.goalSeconds,
                 restSeconds: previous.restSeconds,
                 theme: previous.theme,
+                loops: previous.loops,
             ),
             at: 0,
         )

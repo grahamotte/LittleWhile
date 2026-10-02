@@ -198,4 +198,64 @@ final class FocusRunTests: XCTestCase {
 
         XCTAssertEqual(decoded, run)
     }
+
+    func testLoopingRunRestartsCycleAfterRestAndNeverCompletes() {
+        let run = FocusRun(createdAt: date, startedAt: date, goalSeconds: 300, restSeconds: 60, resumedAt: date, loops: true)
+
+        XCTAssertEqual(run.completedCycles(at: date.addingTimeInterval(359)), 0)
+        XCTAssertTrue(run.isResting(at: date.addingTimeInterval(359)))
+        XCTAssertEqual(run.completedCycles(at: date.addingTimeInterval(360)), 1)
+        XCTAssertFalse(run.isResting(at: date.addingTimeInterval(360)))
+        XCTAssertEqual(run.cycleElapsed(at: date.addingTimeInterval(370)), 10)
+        XCTAssertEqual(run.focusRemaining(at: date.addingTimeInterval(370)), 290)
+        XCTAssertEqual(run.remaining(at: date.addingTimeInterval(370)), 350)
+        XCTAssertEqual(run.periodRemaining(at: date.addingTimeInterval(370)), 290)
+        XCTAssertEqual(run.elapsed(at: date.addingTimeInterval(1_000)), 1_000)
+        XCTAssertEqual(run.completedCycles(at: date.addingTimeInterval(1_000)), 2)
+        XCTAssertTrue(run.isResting(at: date.addingTimeInterval(1_020)))
+        XCTAssertEqual(run.fraction(at: date.addingTimeInterval(1_000)), 1)
+        XCTAssertFalse(run.isComplete(at: date.addingTimeInterval(100_000)))
+    }
+
+    func testLoopingRunCountsFocusAcrossCycles() {
+        let run = FocusRun(createdAt: date, startedAt: date, progressSeconds: 800, goalSeconds: 300, restSeconds: 60, loops: true)
+
+        XCTAssertEqual(run.focusElapsed(at: date), 680)
+        XCTAssertEqual(run.didFinishCycle(at: date), true)
+        let oneShot = FocusRun(createdAt: date, startedAt: date, progressSeconds: 800, goalSeconds: 300, restSeconds: 60)
+        XCTAssertEqual(oneShot.focusElapsed(at: date), 300)
+        XCTAssertEqual(oneShot.completedCycles(at: date), 1)
+        XCTAssertEqual(oneShot.cycleElapsed(at: date), 360)
+        XCTAssertEqual(FocusRun(createdAt: date, progressSeconds: 100).completedCycles(at: date), 0)
+        XCTAssertFalse(FocusRun(createdAt: date, progressSeconds: 100).didFinishCycle(at: date))
+    }
+
+    func testLoopingRunWithoutRestRepeatsFocus() {
+        let run = FocusRun(createdAt: date, startedAt: date, goalSeconds: 60, resumedAt: date, loops: true)
+
+        XCTAssertEqual(run.completedCycles(at: date.addingTimeInterval(150)), 2)
+        XCTAssertEqual(run.periodRemaining(at: date.addingTimeInterval(150)), 30)
+        XCTAssertFalse(run.isResting(at: date.addingTimeInterval(150)))
+    }
+
+    func testAlarmIdentifiersAreStableAndDistinctPerCycle() {
+        let run = FocusRun(createdAt: date)
+
+        XCTAssertEqual(run.alarmID(cycle: 0, resting: false), run.id)
+        XCTAssertEqual(run.alarmID(cycle: 0, resting: true), run.restAlarmID)
+        XCTAssertEqual(run.alarmID(cycle: 3, resting: false), run.alarmID(cycle: 3, resting: false))
+        let identifiers = (0..<4).flatMap { [run.alarmID(cycle: $0, resting: false), run.alarmID(cycle: $0, resting: true)] }
+        XCTAssertEqual(Set(identifiers).count, 8)
+    }
+
+    func testLoopRoundTripsAndDefaultsWhenMissing() throws {
+        let run = FocusRun(createdAt: date, startedAt: date, progressSeconds: 5, loops: true)
+        let decoded = try JSONDecoder().decode(FocusRun.self, from: JSONEncoder().encode(run))
+        XCTAssertEqual(decoded, run)
+
+        var object = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(run)) as? [String: Any])
+        object.removeValue(forKey: "loops")
+        let legacy = try JSONDecoder().decode(FocusRun.self, from: JSONSerialization.data(withJSONObject: object))
+        XCTAssertFalse(legacy.loops)
+    }
 }

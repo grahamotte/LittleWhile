@@ -49,6 +49,42 @@ final class CompletionAlertsTests: XCTestCase {
     }
 
     @MainActor
+    func testLoopingRunSchedulesTheNextCycle() async {
+        let center = NotificationCenterBoundary()
+        let alerts = CompletionAlerts(center: center, now: { self.date })
+        let run = FocusRun(startedAt: date, goalSeconds: 300, restSeconds: 60, resumedAt: date, loops: true)
+
+        await alerts.synchronize(run: run)
+
+        XCTAssertEqual(
+            center.addedRequests.map(\.identifier),
+            ["littlewhile.timer.focus", "littlewhile.timer.complete", "littlewhile.timer.focus.next", "littlewhile.timer.complete.next"],
+        )
+        XCTAssertEqual(
+            center.addedRequests.map { ($0.trigger as? UNTimeIntervalNotificationTrigger)?.timeInterval },
+            [300, 360, 660, 720],
+        )
+        XCTAssertEqual(center.addedRequests.map(\.content.title), ["Focus is up", "Rest is up", "Focus is up", "Rest is up"])
+    }
+
+    @MainActor
+    func testLoopingRunWithoutRestSchedulesEachFocusEnd() async {
+        let center = NotificationCenterBoundary()
+        let alerts = CompletionAlerts(center: center, now: { self.date })
+        let run = FocusRun(startedAt: date, progressSeconds: 70, goalSeconds: 60, resumedAt: date, loops: true)
+
+        await alerts.synchronize(run: run)
+
+        XCTAssertEqual(center.addedRequests.map(\.identifier), ["littlewhile.timer.complete", "littlewhile.timer.complete.next"])
+        XCTAssertEqual(
+            center.addedRequests.map { ($0.trigger as? UNTimeIntervalNotificationTrigger)?.timeInterval },
+            [50, 110],
+        )
+        XCTAssertEqual(center.addedRequests[0].content.title, "Focus is up")
+        XCTAssertEqual(center.addedRequests[0].content.body, "Your next cycle has started.")
+    }
+
+    @MainActor
     func testPausedUnstartedAndCompleteRunsCancelPendingNotifications() async {
         for stoppedRun in [
             FocusRun(),
@@ -63,7 +99,10 @@ final class CompletionAlertsTests: XCTestCase {
             await alerts.synchronize(run: stoppedRun)
 
             XCTAssertNil(center.pendingRequest)
-            XCTAssertEqual(center.removedIdentifiers.last, ["littlewhile.timer.focus", "littlewhile.timer.complete"])
+            XCTAssertEqual(
+                center.removedIdentifiers.last,
+                ["littlewhile.timer.focus", "littlewhile.timer.complete", "littlewhile.timer.focus.next", "littlewhile.timer.complete.next"],
+            )
         }
     }
 

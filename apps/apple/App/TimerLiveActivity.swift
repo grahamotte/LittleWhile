@@ -115,7 +115,12 @@ final class TimerLiveActivity {
             }
         } else if run.isRunning, !complete, creationRunID == run.id, client.canRequest {
             creationRunID = nil
-            let attributes = TimerActivityAttributes(runID: run.id, goalSeconds: run.goalSeconds, restSeconds: run.restSeconds)
+            let attributes = TimerActivityAttributes(
+                runID: run.id,
+                goalSeconds: run.goalSeconds,
+                restSeconds: run.restSeconds,
+                loops: run.loops,
+            )
             try? client.request(attributes: attributes, state: state)
         }
     }
@@ -144,14 +149,14 @@ private final class SystemTimerActivityClient: TimerActivityClient {
     func request(attributes: TimerActivityAttributes, state: TimerActivityAttributes.ContentState) throws {
         _ = try Activity.request(
             attributes: attributes,
-            content: ActivityContent(state: state, staleDate: state.deadline),
+            content: ActivityContent(state: state, staleDate: attributes.loops ? nil : state.deadline),
             pushType: nil,
         )
     }
 
     func update(id: String, state: TimerActivityAttributes.ContentState) async {
         guard let activity = Activity<TimerActivityAttributes>.activities.first(where: { $0.id == id }) else { return }
-        await activity.update(ActivityContent(state: state, staleDate: state.deadline))
+        await activity.update(ActivityContent(state: state, staleDate: activity.attributes.loops ? nil : state.deadline))
     }
 
     func end(id: String, state: TimerActivityAttributes.ContentState, dismissalDate: Date?) async {

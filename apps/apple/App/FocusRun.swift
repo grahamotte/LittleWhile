@@ -10,6 +10,7 @@ struct FocusRun: Identifiable, Equatable {
     var theme: String = "boring"
     var resumedAt: Date?
     var pausedAt: Date?
+    var loops: Bool = false
 
     static let pauseWindow: TimeInterval = 60
 
@@ -23,6 +24,7 @@ struct FocusRun: Identifiable, Equatable {
         theme: String = "boring",
         resumedAt: Date? = nil,
         pausedAt: Date? = nil,
+        loops: Bool = false,
     ) {
         self.id = id
         self.createdAt = createdAt
@@ -33,6 +35,7 @@ struct FocusRun: Identifiable, Equatable {
         self.theme = theme
         self.resumedAt = resumedAt
         self.pausedAt = pausedAt
+        self.loops = loops
     }
 
     var isRunning: Bool {
@@ -84,24 +87,58 @@ struct FocusRun: Identifiable, Equatable {
         return UUID(uuid: bytes)
     }
 
+    func alarmID(cycle: Int, resting: Bool) -> UUID {
+        var bytes = (resting ? restAlarmID : id).uuid
+        let value = UInt32(truncatingIfNeeded: max(0, cycle))
+        bytes.4 ^= UInt8(truncatingIfNeeded: value >> 24)
+        bytes.5 ^= UInt8(truncatingIfNeeded: value >> 16)
+        bytes.6 ^= UInt8(truncatingIfNeeded: value >> 8)
+        bytes.7 ^= UInt8(truncatingIfNeeded: value)
+        return UUID(uuid: bytes)
+    }
+
     func elapsed(at date: Date) -> TimeInterval {
         let total = TimeInterval(totalSeconds)
-        let progress = progressSeconds.isFinite ? min(total, max(0, progressSeconds)) : 0
+        let saved = progressSeconds.isFinite ? max(0, progressSeconds) : 0
+        let progress = loops ? saved : min(total, saved)
         let interval = resumedAt.map { date.timeIntervalSince($0) } ?? 0
         let additional = interval.isFinite ? max(0, interval) : 0
-        return min(total, progress + additional)
+        return loops ? progress + additional : min(total, progress + additional)
+    }
+
+    func completedCycles(at date: Date) -> Int {
+        let total = TimeInterval(totalSeconds)
+        guard total > 0 else { return 0 }
+        let elapsed = elapsed(at: date)
+        if loops {
+            return Int(elapsed / total)
+        }
+        return elapsed >= total ? 1 : 0
+    }
+
+    func cycleElapsed(at date: Date) -> TimeInterval {
+        let total = TimeInterval(totalSeconds)
+        let elapsed = elapsed(at: date)
+        guard loops, total > 0 else { return elapsed }
+        return elapsed - TimeInterval(completedCycles(at: date)) * total
+    }
+
+    func focusElapsed(at date: Date) -> TimeInterval {
+        let goal = TimeInterval(max(0, goalSeconds))
+        guard loops else { return min(goal, elapsed(at: date)) }
+        return TimeInterval(completedCycles(at: date)) * goal + min(goal, cycleElapsed(at: date))
     }
 
     func remaining(at date: Date) -> TimeInterval {
-        max(0, TimeInterval(totalSeconds) - elapsed(at: date))
+        max(0, TimeInterval(totalSeconds) - cycleElapsed(at: date))
     }
 
     func focusRemaining(at date: Date) -> TimeInterval {
-        max(0, TimeInterval(max(0, goalSeconds)) - elapsed(at: date))
+        max(0, TimeInterval(max(0, goalSeconds)) - cycleElapsed(at: date))
     }
 
     func isResting(at date: Date) -> Bool {
-        restSeconds > 0 && elapsed(at: date) >= TimeInterval(max(0, goalSeconds)) && !isComplete(at: date)
+        restSeconds > 0 && cycleElapsed(at: date) >= TimeInterval(max(0, goalSeconds)) && !isComplete(at: date)
     }
 
     func periodSeconds(at date: Date) -> Int {
@@ -123,11 +160,15 @@ struct FocusRun: Identifiable, Equatable {
 
     func fraction(at date: Date) -> Double {
         guard totalSeconds > 0 else { return 1 }
-        return elapsed(at: date) / TimeInterval(totalSeconds)
+        return min(1, elapsed(at: date) / TimeInterval(totalSeconds))
+    }
+
+    func didFinishCycle(at date: Date) -> Bool {
+        completedCycles(at: date) > 0
     }
 
     func isComplete(at date: Date) -> Bool {
-        elapsed(at: date) >= TimeInterval(totalSeconds)
+        !loops && elapsed(at: date) >= TimeInterval(totalSeconds)
     }
 }
 
@@ -142,6 +183,7 @@ extension FocusRun: Codable {
         case theme
         case resumedAt
         case pausedAt
+        case loops
     }
 
     init(from decoder: Decoder) throws {
@@ -155,5 +197,6 @@ extension FocusRun: Codable {
         theme = try container.decode(String.self, forKey: .theme)
         resumedAt = try container.decodeIfPresent(Date.self, forKey: .resumedAt)
         pausedAt = try container.decodeIfPresent(Date.self, forKey: .pausedAt)
+        loops = try container.decodeIfPresent(Bool.self, forKey: .loops) ?? false
     }
 }

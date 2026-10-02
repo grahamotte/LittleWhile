@@ -580,6 +580,94 @@ final class RunStoreTests: XCTestCase {
         }
     }
 
+    func testStartRunAndRestartPreserveLoop() async throws {
+        try withDefaults { defaults in
+            let store = RunStore(defaults: defaults, now: date)
+            store.startRun(minutes: 5, theme: "boring", restMinutes: 1, loops: true, at: date)
+
+            XCTAssertTrue(store.currentRun.loops)
+            XCTAssertTrue(store.currentRun.isRunning)
+
+            store.restart(at: date.addingTimeInterval(30))
+
+            XCTAssertTrue(store.currentRun.loops)
+            XCTAssertFalse(store.currentRun.hasStarted)
+            XCTAssertEqual(try savedRuns(defaults), store.runs)
+        }
+    }
+
+    func testLoopingRunKeepsRunningAcrossCyclesAndRelaunch() async {
+        withDefaults { defaults in
+            let store = RunStore(defaults: defaults, now: date)
+            store.startRun(minutes: 5, theme: "boring", restMinutes: 1, loops: true, at: date)
+
+            store.refresh(at: date.addingTimeInterval(400))
+
+            XCTAssertTrue(store.currentRun.isRunning)
+            XCTAssertEqual(store.currentRun.progressSeconds, 400)
+            XCTAssertEqual(store.currentRun.completedCycles(at: date.addingTimeInterval(400)), 1)
+
+            let restored = RunStore(defaults: defaults, now: date.addingTimeInterval(1_000))
+
+            XCTAssertTrue(restored.currentRun.isRunning)
+            XCTAssertEqual(restored.currentRun.elapsed(at: date.addingTimeInterval(1_000)), 1_000)
+            XCTAssertFalse(restored.currentRun.isComplete(at: date.addingTimeInterval(1_000)))
+        }
+    }
+
+    func testStopArchivesRunAndLeavesFreshReadyRunWithSameSettings() async throws {
+        try withDefaults { defaults in
+            let store = RunStore(defaults: defaults, now: date)
+            store.startRun(minutes: 5, theme: "garden", restMinutes: 1, loops: true, at: date)
+            let stoppedID = store.currentRun.id
+
+            store.stop(at: date.addingTimeInterval(500))
+
+            XCTAssertNotEqual(store.currentRun.id, stoppedID)
+            XCTAssertFalse(store.currentRun.hasStarted)
+            XCTAssertFalse(store.currentRun.isComplete(at: date.addingTimeInterval(500)))
+            XCTAssertEqual(store.currentRun.goalSeconds, 300)
+            XCTAssertEqual(store.currentRun.restSeconds, 60)
+            XCTAssertEqual(store.currentRun.theme, "garden")
+            XCTAssertTrue(store.currentRun.loops)
+            XCTAssertEqual(store.history[0].id, stoppedID)
+            XCTAssertEqual(store.history[0].progressSeconds, 500)
+            XCTAssertFalse(store.history[0].isRunning)
+            XCTAssertEqual(try savedRuns(defaults), store.runs)
+        }
+    }
+
+    func testStopCountsTimeAfterAnExpiredPauseWindow() async {
+        withDefaults { defaults in
+            let store = RunStore(defaults: defaults, now: date)
+            store.start(at: date)
+            store.pause(at: date.addingTimeInterval(100))
+
+            store.stop(at: date.addingTimeInterval(200))
+
+            XCTAssertEqual(store.history[0].progressSeconds, 140)
+            XCTAssertNil(store.history[0].pausedAt)
+            XCTAssertFalse(store.currentRun.hasStarted)
+        }
+    }
+
+    func testStopIgnoresReadyAndCompletedRuns() async {
+        withDefaults { defaults in
+            let store = RunStore(defaults: defaults, now: date)
+            let readyID = store.currentRun.id
+            store.stop(at: date)
+            XCTAssertEqual(store.currentRun.id, readyID)
+
+            store.createRun(minutes: 1, theme: "boring", at: date)
+            let completedID = store.currentRun.id
+            store.start(at: date)
+            store.stop(at: date.addingTimeInterval(120))
+
+            XCTAssertEqual(store.currentRun.id, completedID)
+            XCTAssertEqual(store.currentRun.progressSeconds, 60)
+        }
+    }
+
     private func withDefaults(_ body: (UserDefaults) throws -> Void) rethrows {
         let suite = "RunStoreTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suite)!

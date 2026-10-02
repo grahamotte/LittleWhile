@@ -20,6 +20,8 @@ struct TimerSnapshot: Equatable {
     let status: Status
     let pauseRemainingSeconds: TimeInterval?
     let pauseWindowSeconds: TimeInterval
+    let loops: Bool
+    let cycle: Int
 
     init(run source: FocusRun, at date: Date) {
         let run = source.autoResumed(at: date)
@@ -28,12 +30,14 @@ struct TimerSnapshot: Equatable {
         goalSeconds = run.goalSeconds
         restSeconds = run.restSeconds
         totalSeconds = run.totalSeconds
-        elapsedSeconds = run.elapsed(at: date)
+        elapsedSeconds = run.cycleElapsed(at: date)
         remainingSeconds = run.periodRemaining(at: date)
         progress = run.periodProgress(at: date)
         isResting = run.isResting(at: date)
         pauseRemainingSeconds = run.pauseRemaining(at: date)
         pauseWindowSeconds = FocusRun.pauseWindow
+        loops = run.loops
+        cycle = run.completedCycles(at: date)
         if run.isComplete(at: date) {
             status = .complete
         } else if run.isRunning {
@@ -48,6 +52,14 @@ struct TimerSnapshot: Equatable {
     var clockText: String {
         let seconds = Int(ceil(remainingSeconds))
         return String(format: "%02d:%02d", seconds / 60, seconds % 60)
+    }
+
+    var canStop: Bool {
+        status == .running || status == .paused
+    }
+
+    var stopLabel: String {
+        loops ? "Stop loop" : "Stop timer"
     }
 
     var controlSymbol: String {

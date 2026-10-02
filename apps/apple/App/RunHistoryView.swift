@@ -67,7 +67,8 @@ struct RunHistoryView: View {
     }
 
     private func historyRow(_ run: FocusRun, isCurrent: Bool, at date: Date) -> some View {
-        let complete = run.isComplete(at: date)
+        let complete = run.didFinishCycle(at: date)
+        let cycles = run.completedCycles(at: date)
 
         return VStack(alignment: .leading, spacing: 17) {
             HStack(alignment: .top, spacing: 14) {
@@ -80,7 +81,9 @@ struct RunHistoryView: View {
                         Text(Duration.seconds(run.elapsed(at: date)).formatted(.time(pattern: .minuteSecond)))
                             .font(.system(.title2, design: .rounded, weight: .medium))
 
-                        Text("of \(Duration.seconds(run.totalSeconds).formatted(.time(pattern: .minuteSecond)))")
+                        Text(run.loops
+                            ? "\(cycles) \(cycles == 1 ? "cycle" : "cycles")"
+                            : "of \(Duration.seconds(run.totalSeconds).formatted(.time(pattern: .minuteSecond)))")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                     }
@@ -102,7 +105,7 @@ struct RunHistoryView: View {
                 .accessibilityLabel("Run progress")
 
             HStack {
-                Text(TimerThemes.resolve(run.theme).name)
+                Text(run.loops ? "\(TimerThemes.resolve(run.theme).name) · Loop" : TimerThemes.resolve(run.theme).name)
 
                 Spacer()
 

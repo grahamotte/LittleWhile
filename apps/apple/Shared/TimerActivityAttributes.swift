@@ -14,6 +14,7 @@ nonisolated struct TimerActivityAttributes: Codable, Hashable, Sendable {
     var runID: UUID
     var goalSeconds: Int
     var restSeconds: Int = 0
+    var loops: Bool = false
 }
 
 #if os(iOS) && canImport(ActivityKit)
