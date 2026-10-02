@@ -3,7 +3,7 @@ import XCTest
 
 final class TimerActivityAttributesTests: XCTestCase {
     func testAttributesRoundTripRunIdentityAndGoal() throws {
-        let attributes = TimerActivityAttributes(runID: UUID(), goalSeconds: 2_700)
+        let attributes = TimerActivityAttributes(runID: UUID(), goalSeconds: 2_700, restSeconds: 300, loops: true)
 
         let restored = try JSONDecoder().decode(TimerActivityAttributes.self, from: JSONEncoder().encode(attributes))
 

@@ -18,7 +18,13 @@ nonisolated struct StopTimerAlarmIntent: LiveActivityIntent {
 
     func perform() async throws -> some IntentResult {
         if let runID = UUID(uuidString: runIdentifier) {
-            await TimerLiveActivity().finish(runID: runID)
+            let run = await MainActor.run { RunStore().currentRun }
+            if run.id == runID, run.loops, !run.isComplete(at: .now) {
+                _ = await TimerAlarm().synchronize(run: run)
+                await TimerLiveActivity().synchronize(run: run)
+            } else {
+                await TimerLiveActivity().finish(runID: runID)
+            }
         }
         return .result()
     }

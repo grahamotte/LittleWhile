@@ -6,6 +6,7 @@ struct AppView: View {
     @State private var companion: TimerCompanion?
     @State private var sheet: TimerSheet?
     @State private var showingRestart = false
+    @State private var showingStop = false
     @State private var completedRunID: UUID?
 
     init(store: RunStore? = nil) {
@@ -39,6 +40,11 @@ struct AppView: View {
                     store.refresh()
                     synchronizeCompanion()
                 }
+                .onChange(of: snapshot.cycle) { _, _ in
+                    guard snapshot.loops else { return }
+                    store.refresh()
+                    synchronizeCompanion()
+                }
                 .sensoryFeedback(.success, trigger: snapshot.status == .complete) { _, completed in
                     completed
                 }
@@ -46,8 +52,8 @@ struct AppView: View {
         .sheet(item: $sheet) { sheet in
             switch sheet {
             case .settings:
-                RunSettingsView(currentRun: store.currentRun) { minutes, restMinutes, theme in
-                    store.startRun(minutes: minutes, theme: theme, restMinutes: restMinutes)
+                RunSettingsView(currentRun: store.currentRun) { minutes, restMinutes, loops, theme in
+                    store.startRun(minutes: minutes, theme: theme, restMinutes: restMinutes, loops: loops)
                     synchronizeCompanion(userInitiated: true)
                 }
                 .presentationDragIndicator(.visible)
@@ -64,6 +70,19 @@ struct AppView: View {
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("Your progress will stay in History. A fresh run with the same times and theme will be ready to start.")
+        }
+        .confirmationDialog(
+            store.currentRun.loops ? "Stop this loop?" : "Stop this run?",
+            isPresented: $showingStop,
+            titleVisibility: .visible,
+        ) {
+            Button("Stop", role: .destructive) {
+                store.stop()
+                synchronizeCompanion()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Your progress will stay in History.")
         }
         .alert("Alarm couldn’t be confirmed", isPresented: Binding(
             get: { companion?.alarmIssue != nil },
@@ -93,9 +112,15 @@ struct AppView: View {
             GlassIconButton(symbol: "clock.arrow.circlepath", label: "History") {
                 sheet = .history
             }
-            Spacer()
             GlassIconButton(symbol: "slider.horizontal.3", label: "Run settings") {
                 sheet = .settings
+            }
+            Spacer()
+            if snapshot.canStop {
+                GlassIconButton(symbol: "stop.fill", label: snapshot.stopLabel) {
+                    showingStop = true
+                }
+                .transition(.scale.combined(with: .opacity))
             }
             GlassIconButton(symbol: snapshot.controlSymbol, label: snapshot.controlLabel) {
                 if snapshot.status == .complete {
@@ -118,6 +143,7 @@ struct AppView: View {
         }
         .padding(.horizontal, 24)
         .padding(.top, 12)
+        .animation(.easeInOut(duration: 0.2), value: snapshot.canStop)
     }
 
     private func handleCompletion(_ snapshot: TimerSnapshot) {

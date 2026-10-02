@@ -33,8 +33,7 @@ struct MonthlyActivity {
         for run in runs {
             let startedAt = run.startedAt ?? run.createdAt
             guard startedAt <= date, interval.contains(startedAt) else { continue }
-            let focusSeconds = min(TimeInterval(max(0, run.goalSeconds)), run.elapsed(at: date))
-            totals[calendar.startOfDay(for: startedAt), default: 0] += focusSeconds
+            totals[calendar.startOfDay(for: startedAt), default: 0] += run.focusElapsed(at: date)
         }
 
         days = calendar.range(of: .day, in: .month, for: interval.start)!.map { number in

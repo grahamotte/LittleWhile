@@ -28,6 +28,38 @@ final class TimerLiveActivityTests: XCTestCase {
         XCTAssertFalse(activity.state.isComplete)
     }
 
+    func testLoopingRunCreatesLoopingActivityWithCurrentCycleDeadline() async throws {
+        let client = ActivityBoundary()
+        let coordinator = TimerLiveActivity(client: client, now: { self.date })
+        let run = FocusRun(startedAt: date, progressSeconds: 400, goalSeconds: 300, restSeconds: 60, resumedAt: date, loops: true)
+
+        await coordinator.synchronize(run: run, userInitiated: true)
+
+        let activity = try XCTUnwrap(client.activities.first)
+        XCTAssertTrue(activity.attributes.loops)
+        XCTAssertEqual(activity.attributes.restSeconds, 60)
+        XCTAssertEqual(activity.state.remainingSeconds, 320)
+        XCTAssertEqual(activity.state.deadline, date.addingTimeInterval(320))
+        XCTAssertFalse(activity.state.isComplete)
+    }
+
+    func testStoppingALoopEndsItsActivity() async throws {
+        let client = ActivityBoundary()
+        let coordinator = TimerLiveActivity(client: client, now: { self.date })
+        var run = FocusRun(startedAt: date, goalSeconds: 300, restSeconds: 60, resumedAt: date, loops: true)
+        await coordinator.synchronize(run: run, userInitiated: true)
+        run.progressSeconds = 100
+        run.resumedAt = nil
+        run.stoppedAt = date
+
+        await coordinator.synchronize(run: run)
+
+        let ending = try XCTUnwrap(client.endings.first)
+        XCTAssertTrue(ending.state.isComplete)
+        XCTAssertNil(ending.state.deadline)
+        XCTAssertTrue(client.activities.isEmpty)
+    }
+
     func testUnstartedPausedAndCompletedRunsDoNotCreateActivities() async {
         for run in [
             FocusRun(createdAt: date),

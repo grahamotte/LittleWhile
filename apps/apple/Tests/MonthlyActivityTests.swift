@@ -61,6 +61,17 @@ final class MonthlyActivityTests: XCTestCase {
         XCTAssertEqual(activity.days.reduce(0) { $0 + $1.focusSeconds }, 1_620)
     }
 
+    func testLoopingRunCountsFocusFromEveryCycle() {
+        let now = date(2026, 9, 29)
+        let started = date(2026, 9, 10)
+        let runs = [
+            FocusRun(createdAt: started, startedAt: started, progressSeconds: 4_000, goalSeconds: 1_500, restSeconds: 300, loops: true),
+        ]
+        let activity = MonthlyActivity(runs: runs, month: now, at: now, calendar: calendar)
+
+        XCTAssertEqual(activity.days[9].focusSeconds, 3_400)
+    }
+
     func testUsesLocalStartDayInsteadOfCreationDayAndFallsBackForLegacyRuns() {
         let now = date(2026, 9, 29)
         let started = date(2026, 9, 1, hour: 23)

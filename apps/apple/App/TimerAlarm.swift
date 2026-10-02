@@ -117,7 +117,7 @@ final class TimerAlarm {
         guard authorization != .denied else { return .unavailable }
         guard let alarms = try? manager.alarms() else { return .uncertain }
 
-        let ownedIDs = [run.id, run.restAlarmID]
+        let ownedIDs = owned(run: run, at: now())
         var cancellationFailed = false
         for alarm in alarms where !ownedIDs.contains(alarm.id) {
             do {
@@ -167,17 +167,31 @@ final class TimerAlarm {
         guard run.isRunning, !run.isComplete(at: date) else { return [] }
         var alarms: [(id: UUID, deadline: Date, phase: TimerAlarmPhase)] = []
         let delay = run.resumeDelay(at: date)
+        let cycle = run.completedCycles(at: date)
         let focusRemaining = run.focusRemaining(at: date)
         if focusRemaining > 0 {
-            alarms.append((run.id, date.addingTimeInterval(delay + focusRemaining), .focus))
+            alarms.append((run.alarmID(cycle: cycle, resting: false), date.addingTimeInterval(delay + focusRemaining), .focus))
         }
-        if run.restSeconds > 0 {
-            let totalRemaining = run.remaining(at: date)
-            if totalRemaining > 0 {
-                alarms.append((run.restAlarmID, date.addingTimeInterval(delay + totalRemaining), .rest))
+        let totalRemaining = run.remaining(at: date)
+        if run.restSeconds > 0, totalRemaining > 0 {
+            alarms.append((run.alarmID(cycle: cycle, resting: true), date.addingTimeInterval(delay + totalRemaining), .rest))
+        }
+        if run.loops {
+            let nextCycle = date.addingTimeInterval(delay + totalRemaining)
+            alarms.append((run.alarmID(cycle: cycle + 1, resting: false), nextCycle.addingTimeInterval(TimeInterval(max(0, run.goalSeconds))), .focus))
+            if run.restSeconds > 0 {
+                alarms.append((run.alarmID(cycle: cycle + 1, resting: true), nextCycle.addingTimeInterval(TimeInterval(run.totalSeconds)), .rest))
             }
         }
         return alarms
+    }
+
+    private func owned(run: FocusRun, at date: Date) -> [UUID] {
+        guard run.loops else { return [run.id, run.restAlarmID] }
+        let cycle = run.completedCycles(at: date)
+        return (max(0, cycle - 1)...(cycle + 1)).flatMap { cycle in
+            [run.alarmID(cycle: cycle, resting: false), run.alarmID(cycle: cycle, resting: true)]
+        }
     }
 
     private func finishCompleted(

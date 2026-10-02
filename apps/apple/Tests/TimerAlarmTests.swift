@@ -51,6 +51,67 @@ final class TimerAlarmTests: XCTestCase {
     }
 
     @MainActor
+    func testLoopingRunSchedulesTheNextCycleUpfront() async {
+        let manager = AlarmManagerBoundary()
+        let alarm = TimerAlarm(manager: manager, now: { self.date })
+        let run = FocusRun(startedAt: date, goalSeconds: 300, restSeconds: 60, resumedAt: date, loops: true)
+
+        let covered = await alarm.synchronize(run: run)
+
+        XCTAssertEqual(covered, .scheduled)
+        XCTAssertEqual(manager.schedules.map(\.id), [
+            run.id,
+            run.restAlarmID,
+            run.alarmID(cycle: 1, resting: false),
+            run.alarmID(cycle: 1, resting: true),
+        ])
+        XCTAssertEqual(manager.schedules.map(\.deadline), [
+            date.addingTimeInterval(300),
+            date.addingTimeInterval(360),
+            date.addingTimeInterval(660),
+            date.addingTimeInterval(720),
+        ])
+    }
+
+    @MainActor
+    func testLoopingRunKeepsTheRingingPriorCycleAlarmAndSchedulesAhead() async {
+        let manager = AlarmManagerBoundary()
+        let alarm = TimerAlarm(manager: manager, now: { self.date })
+        let run = FocusRun(startedAt: date, progressSeconds: 370, goalSeconds: 300, restSeconds: 60, resumedAt: date, loops: true)
+        let stale = UUID()
+        manager.records = [
+            TimerAlarmRecord(id: run.restAlarmID, deadline: date.addingTimeInterval(-10), state: .alerting),
+            TimerAlarmRecord(id: run.alarmID(cycle: 1, resting: false), deadline: date.addingTimeInterval(290), state: .scheduled),
+            TimerAlarmRecord(id: run.alarmID(cycle: 1, resting: true), deadline: date.addingTimeInterval(350), state: .scheduled),
+            TimerAlarmRecord(id: stale, deadline: date.addingTimeInterval(100), state: .scheduled),
+        ]
+
+        let covered = await alarm.synchronize(run: run)
+
+        XCTAssertEqual(covered, .scheduled)
+        XCTAssertEqual(manager.cancellations, [stale])
+        XCTAssertEqual(manager.schedules.map(\.id), [run.alarmID(cycle: 2, resting: false), run.alarmID(cycle: 2, resting: true)])
+        XCTAssertEqual(manager.schedules.map(\.deadline), [date.addingTimeInterval(650), date.addingTimeInterval(710)])
+        XCTAssertTrue(manager.records.contains { $0.id == run.restAlarmID && $0.state == .alerting })
+    }
+
+    @MainActor
+    func testStoppingALoopCancelsUpcomingAlarms() async {
+        let manager = AlarmManagerBoundary()
+        let alarm = TimerAlarm(manager: manager, now: { self.date })
+        var run = FocusRun(startedAt: date, goalSeconds: 300, restSeconds: 60, resumedAt: date, loops: true)
+        _ = await alarm.synchronize(run: run)
+        run.progressSeconds = 30
+        run.resumedAt = nil
+        run.stoppedAt = date
+
+        let covered = await alarm.synchronize(run: run)
+
+        XCTAssertEqual(covered, .unavailable)
+        XCTAssertTrue(manager.records.isEmpty)
+    }
+
+    @MainActor
     func testPauseCancelsFocusAndRestAlarmsAndResumeReschedulesRemainingTime() async {
         let manager = AlarmManagerBoundary()
         let alarm = TimerAlarm(manager: manager, now: { self.date })

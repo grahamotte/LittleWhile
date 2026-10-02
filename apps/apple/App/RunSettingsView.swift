@@ -8,17 +8,19 @@ struct RunSettingsView: View {
     @State private var visibleMinute: Int?
     @State private var selectedRestMinute: Int
     @State private var visibleRestMinute: Int?
+    @State private var loops: Bool
     @State private var didPositionSelectors = false
 
-    let onStart: (Int, Int, String) -> Void
+    let onStart: (Int, Int, Bool, String) -> Void
 
-    init(currentRun: FocusRun, onStart: @escaping (Int, Int, String) -> Void) {
+    init(currentRun: FocusRun, onStart: @escaping (Int, Int, Bool, String) -> Void) {
         _selectedTheme = State(initialValue: TimerThemes.resolve(currentRun.theme).id)
         _visibleTheme = State(initialValue: nil)
         _selectedMinute = State(initialValue: min(120, max(1, currentRun.goalSeconds / 60)))
         _visibleMinute = State(initialValue: nil)
         _selectedRestMinute = State(initialValue: min(120, max(0, currentRun.restSeconds / 60)))
         _visibleRestMinute = State(initialValue: nil)
+        _loops = State(initialValue: currentRun.loops)
         self.onStart = onStart
     }
 
@@ -43,6 +45,16 @@ struct RunSettingsView: View {
                         range: 0...120,
                         accessibilityLabel: "Rest duration",
                     )
+                    Toggle(isOn: $loops) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Loop")
+                                .font(.headline)
+                            Text("Start the next cycle as soon as rest ends.")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .padding(.horizontal, 28)
                     Link("Privacy Policy", destination: URL(string: "https://github.com/grahamotte/littlewhile.app/blob/master/docs/privacy-policy.md")!)
                         .font(.footnote)
                         .padding(.horizontal, 28)
@@ -55,7 +67,7 @@ struct RunSettingsView: View {
         .background(.background)
         .safeAreaInset(edge: .bottom, spacing: 0) {
             GlassActionButton(title: "Start") {
-                onStart(selectedMinute, selectedRestMinute, selectedTheme)
+                onStart(selectedMinute, selectedRestMinute, loops, selectedTheme)
                 dismiss()
             }
             .frame(maxWidth: .infinity)

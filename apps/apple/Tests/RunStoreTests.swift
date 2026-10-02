@@ -580,6 +580,88 @@ final class RunStoreTests: XCTestCase {
         }
     }
 
+    func testStartRunAndRestartPreserveLoop() async throws {
+        try withDefaults { defaults in
+            let store = RunStore(defaults: defaults, now: date)
+            store.startRun(minutes: 5, theme: "boring", restMinutes: 1, loops: true, at: date)
+
+            XCTAssertTrue(store.currentRun.loops)
+            XCTAssertTrue(store.currentRun.isRunning)
+
+            store.restart(at: date.addingTimeInterval(30))
+
+            XCTAssertTrue(store.currentRun.loops)
+            XCTAssertFalse(store.currentRun.hasStarted)
+            XCTAssertEqual(try savedRuns(defaults), store.runs)
+        }
+    }
+
+    func testLoopingRunKeepsRunningAcrossCyclesAndRelaunch() async {
+        withDefaults { defaults in
+            let store = RunStore(defaults: defaults, now: date)
+            store.startRun(minutes: 5, theme: "boring", restMinutes: 1, loops: true, at: date)
+
+            store.refresh(at: date.addingTimeInterval(400))
+
+            XCTAssertTrue(store.currentRun.isRunning)
+            XCTAssertEqual(store.currentRun.progressSeconds, 400)
+            XCTAssertEqual(store.currentRun.completedCycles(at: date.addingTimeInterval(400)), 1)
+
+            let restored = RunStore(defaults: defaults, now: date.addingTimeInterval(1_000))
+
+            XCTAssertTrue(restored.currentRun.isRunning)
+            XCTAssertEqual(restored.currentRun.elapsed(at: date.addingTimeInterval(1_000)), 1_000)
+            XCTAssertFalse(restored.currentRun.isComplete(at: date.addingTimeInterval(1_000)))
+        }
+    }
+
+    func testStopEndsRunAndKeepsProgress() async throws {
+        try withDefaults { defaults in
+            let store = RunStore(defaults: defaults, now: date)
+            store.startRun(minutes: 5, theme: "boring", restMinutes: 1, loops: true, at: date)
+
+            store.stop(at: date.addingTimeInterval(500))
+            store.refresh(at: date.addingTimeInterval(900))
+            store.start(at: date.addingTimeInterval(950))
+
+            XCTAssertEqual(store.currentRun.stoppedAt, date.addingTimeInterval(500))
+            XCTAssertEqual(store.currentRun.progressSeconds, 500)
+            XCTAssertFalse(store.currentRun.isRunning)
+            XCTAssertTrue(store.currentRun.isComplete(at: date.addingTimeInterval(900)))
+            XCTAssertEqual(try savedRuns(defaults), store.runs)
+            XCTAssertEqual(RunStore(defaults: defaults, now: date.addingTimeInterval(1_000)).currentRun, store.currentRun)
+        }
+    }
+
+    func testStopCountsTimeAfterAnExpiredPauseWindow() async {
+        withDefaults { defaults in
+            let store = RunStore(defaults: defaults, now: date)
+            store.start(at: date)
+            store.pause(at: date.addingTimeInterval(100))
+
+            store.stop(at: date.addingTimeInterval(200))
+
+            XCTAssertEqual(store.currentRun.progressSeconds, 140)
+            XCTAssertNil(store.currentRun.pausedAt)
+            XCTAssertNotNil(store.currentRun.stoppedAt)
+        }
+    }
+
+    func testStopIgnoresReadyAndCompletedRuns() async {
+        withDefaults { defaults in
+            let store = RunStore(defaults: defaults, now: date)
+            store.stop(at: date)
+            XCTAssertNil(store.currentRun.stoppedAt)
+
+            store.createRun(minutes: 1, theme: "boring", at: date)
+            store.start(at: date)
+            store.stop(at: date.addingTimeInterval(120))
+
+            XCTAssertNil(store.currentRun.stoppedAt)
+            XCTAssertEqual(store.currentRun.progressSeconds, 60)
+        }
+    }
+
     private func withDefaults(_ body: (UserDefaults) throws -> Void) rethrows {
         let suite = "RunStoreTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suite)!

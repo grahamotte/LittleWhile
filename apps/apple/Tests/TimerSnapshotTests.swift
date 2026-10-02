@@ -19,6 +19,31 @@ final class TimerSnapshotTests: XCTestCase {
         XCTAssertEqual(snapshot.controlLabel, "Start timer")
     }
 
+    func testLoopingSnapshotShowsCurrentCycleAndStopControl() {
+        let run = FocusRun(createdAt: date, startedAt: date, goalSeconds: 300, restSeconds: 60, resumedAt: date, loops: true)
+        let snapshot = TimerSnapshot(run: run, at: date.addingTimeInterval(370))
+        XCTAssertEqual(snapshot.status, .running)
+        XCTAssertTrue(snapshot.loops)
+        XCTAssertEqual(snapshot.cycle, 1)
+        XCTAssertEqual(snapshot.elapsedSeconds, 10)
+        XCTAssertFalse(snapshot.isResting)
+        XCTAssertEqual(snapshot.clockText, "04:50")
+        XCTAssertTrue(snapshot.canStop)
+        XCTAssertEqual(snapshot.stopLabel, "Stop loop")
+    }
+
+    func testStopControlOnlyAppliesToActiveRuns() {
+        XCTAssertFalse(TimerSnapshot(run: FocusRun(createdAt: date), at: date).canStop)
+        let paused = TimerSnapshot(run: FocusRun(createdAt: date, startedAt: date, progressSeconds: 10), at: date)
+        XCTAssertTrue(paused.canStop)
+        XCTAssertEqual(paused.stopLabel, "Stop timer")
+        XCTAssertEqual(paused.cycle, 0)
+        let stopped = TimerSnapshot(run: FocusRun(createdAt: date, startedAt: date, progressSeconds: 10, loops: true, stoppedAt: date), at: date)
+        XCTAssertEqual(stopped.status, .complete)
+        XCTAssertFalse(stopped.canStop)
+        XCTAssertEqual(stopped.controlSymbol, "arrow.counterclockwise")
+    }
+
     func testRunningSnapshotRoundsRemainingTimeUp() {
         let run = FocusRun(createdAt: date, startedAt: date, resumedAt: date)
         let snapshot = TimerSnapshot(run: run, at: date.addingTimeInterval(60.2))

@@ -41,8 +41,10 @@ private final class SystemCompletionNotificationCenter: CompletionNotificationCe
 final class CompletionAlerts: NSObject, UNUserNotificationCenterDelegate {
     static let notificationIdentifier = "littlewhile.timer.complete"
     static let focusIdentifier = "littlewhile.timer.focus"
+    static let nextFocusIdentifier = "littlewhile.timer.focus.next"
+    static let nextNotificationIdentifier = "littlewhile.timer.complete.next"
 
-    private static let identifiers = [focusIdentifier, notificationIdentifier]
+    private static let identifiers = [focusIdentifier, notificationIdentifier, nextFocusIdentifier, nextNotificationIdentifier]
 
     private let center: any CompletionNotificationCenter
     private let now: () -> Date
@@ -122,30 +124,46 @@ final class CompletionAlerts: NSObject, UNUserNotificationCenterDelegate {
         let totalRemaining = run.remaining(at: sampledAt) + delay
         guard totalRemaining > 0 else { return }
 
-        if run.restSeconds > 0 {
-            let focusRemaining = run.focusRemaining(at: sampledAt) + delay
-            if run.focusRemaining(at: sampledAt) > 0 {
-                let focus = UNMutableNotificationContent()
-                focus.title = "Focus is up"
-                focus.body = "Time for a rest."
-                focus.sound = .default
-                try? await center.add(UNNotificationRequest(
-                    identifier: Self.focusIdentifier,
-                    content: focus,
-                    trigger: UNTimeIntervalNotificationTrigger(timeInterval: max(1, focusRemaining), repeats: false),
-                ))
-                guard currentGeneration == generation else { return }
+        var requests: [(identifier: String, content: UNMutableNotificationContent, interval: TimeInterval)] = []
+        if run.restSeconds > 0, run.focusRemaining(at: sampledAt) > 0 {
+            requests.append((Self.focusIdentifier, focusContent(), run.focusRemaining(at: sampledAt) + delay))
+        }
+        requests.append((Self.notificationIdentifier, cycleContent(run: run), totalRemaining))
+        if run.loops {
+            if run.restSeconds > 0 {
+                requests.append((Self.nextFocusIdentifier, focusContent(), totalRemaining + TimeInterval(run.goalSeconds)))
             }
+            requests.append((Self.nextNotificationIdentifier, cycleContent(run: run), totalRemaining + TimeInterval(run.totalSeconds)))
         }
 
+        for request in requests {
+            guard currentGeneration == generation else { return }
+            try? await center.add(UNNotificationRequest(
+                identifier: request.identifier,
+                content: request.content,
+                trigger: UNTimeIntervalNotificationTrigger(timeInterval: max(1, request.interval), repeats: false),
+            ))
+        }
+    }
+
+    private func focusContent() -> UNMutableNotificationContent {
         let content = UNMutableNotificationContent()
-        content.title = "Time’s up"
-        content.body = "A little while, well spent."
+        content.title = "Focus is up"
+        content.body = "Time for a rest."
         content.sound = .default
-        try? await center.add(UNNotificationRequest(
-            identifier: Self.notificationIdentifier,
-            content: content,
-            trigger: UNTimeIntervalNotificationTrigger(timeInterval: max(1, totalRemaining), repeats: false),
-        ))
+        return content
+    }
+
+    private func cycleContent(run: FocusRun) -> UNMutableNotificationContent {
+        let content = UNMutableNotificationContent()
+        if run.loops {
+            content.title = run.restSeconds > 0 ? "Rest is up" : "Focus is up"
+            content.body = "Your next cycle has started."
+        } else {
+            content.title = "Time’s up"
+            content.body = "A little while, well spent."
+        }
+        content.sound = .default
+        return content
     }
 }
