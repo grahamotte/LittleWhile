@@ -10,7 +10,7 @@ Projects built on Code Moto keep their own Git history and configuration, and ca
 - **Frontend:** React, TypeScript, Vite, and Tailwind CSS, with separate sites for configured subdomains.
 - **Apps:** Swift apps targeting iOS, macOS, and tvOS, with simulator and App Store publishing tools.
 - **Operations:** Server provisioning and deployment, backups, and shared Ruby gems.
-- **Agent workflow:** A manager that picks up Linear cards, launches coding agents in Git worktrees, and merges approved pull requests.
+- **Agent workflow:** Linear cards are worked by coding agents in Git worktrees, dispatched by the sister repository [Mr. Moto](https://github.com/grahamotte/mr-moto).
 
 ## Local development
 
@@ -33,13 +33,12 @@ Non-secret project settings live in `config.json`, including the domain, GitHub 
 | `mise console` | Open the Rails development console |
 | `mise simulate iphone` | Launch the iPhone app in a simulator |
 | `mise xcode` | Open the Apple app project |
-| `mise manager:trigger` | Process eligible cards for the configured Linear team |
 
 Deployment, upstream merges, and publishing follow the card and pull request workflow described in [AGENTS.md](AGENTS.md), using the corresponding skills in [.agents/skills](.agents/skills).
 
 ## Starting another project
 
-Run `mise spawn example.com` from this repository to create a sibling checkout with project configuration and generated environment files. Create its GitHub repository and review its configuration and credentials before using it. Downstream projects use the merge skill to bring in updates from Code Moto without replacing their history.
+Run `mise spawn example.com` from this repository to create a sibling checkout with project configuration and generated environment files. Create its GitHub repository and review its configuration and credentials before using it. Add it to `projects` in `~/.config/codemoto/config.json` so Mr. Moto manages its Linear cards. Downstream projects use the merge skill to bring in updates from Code Moto without replacing their history.
 
 ## Repository guide
 
@@ -51,7 +50,7 @@ Run `mise spawn example.com` from this repository to create a sibling checkout w
 | `gems/` | Shared Ruby libraries |
 | `deploy/` | Infrastructure and deployment tooling |
 | `publish/` | App versioning, simulation, and publishing |
-| `manager/` | Linear workflow, agent runners, and project creation |
+| `manager/` | Secrets refresh, project creation, and Code Moto merges |
 | `scripts/` | Scripts behind mise tasks |
 
-See [manager runners and labels](docs/manager.md) for agent configuration, [Apple credentials](docs/apple-credentials.md) for publishing setup, and [AGENTS.md](AGENTS.md) for contribution rules.
+See [manager](docs/manager.md) for how Code Moto works with Mr. Moto, [Apple credentials](docs/apple-credentials.md) for publishing setup, and [AGENTS.md](AGENTS.md) for contribution rules.
