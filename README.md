@@ -10,19 +10,18 @@ Projects built on Code Moto keep their own Git history and configuration, and ca
 - **Frontend:** React, TypeScript, Vite, and Tailwind CSS, with separate sites for configured subdomains.
 - **Apps:** Swift apps targeting iOS, macOS, and tvOS, with simulator and App Store publishing tools.
 - **Operations:** Server provisioning and deployment, backups, and shared Ruby gems.
-- **Agent workflow:** Linear cards are worked by coding agents in Git worktrees, dispatched by the sister repository [Mr. Moto](https://github.com/grahamotte/mr-moto).
 
 ## Local development
 
 Install mise and PostgreSQL, and have PostgreSQL running locally. Apple app development and tests also require macOS with Xcode.
 
 1. Run `mise install` to install the tool versions pinned in `mise.toml`.
-2. Create `.env.development` and `.env.production` from `.env.default` and fill in the required values. Existing projects with configured 1Password references can use `mise manager:secrets` with a service account instead.
+2. Create `.env.development` and `.env.production` from `.env.default` and fill in the required values. Projects registered in Mr. Moto with 1Password references can generate them with Mr. Moto's `mise secrets <project>` instead.
 3. Run `mise dependencies` to install project dependencies.
 4. Run `mise db:migrate` to prepare the development database.
 5. Run `mise start` to start the API, background jobs, and frontend sites. It prints the local URLs; the API runs at `http://localhost:3000`.
 
-Non-secret project settings live in `config.json`, including the domain, GitHub repository, database name, subdomains, agent defaults, and app release details. Credentials live in the gitignored `.env.*` files.
+Non-secret project settings live in `config.json`, including the domain, GitHub repository, database name, subdomains, and app release details. Application credentials live in the gitignored `.env.*` files. GitHub release artifact publishing uses `GITHUB_TOKEN` from `.env.production`. Linear and GitHub/Forgejo PR operations use the central commands supplied by Mr. Moto; repository-local tokens are not supported.
 
 ## Common commands
 
@@ -34,11 +33,11 @@ Non-secret project settings live in `config.json`, including the domain, GitHub 
 | `mise simulate iphone` | Launch the iPhone app in a simulator |
 | `mise xcode` | Open the Apple app project |
 
-Deployment, upstream merges, and publishing follow the card and pull request workflow described in [AGENTS.md](AGENTS.md), using the corresponding skills in [.agents/skills](.agents/skills).
+Deployment, basis merges, and publishing use the project-specific instructions in [.agents/skills](.agents/skills). Mr. Moto owns card tracking, enqueueing, and the review workflow.
 
 ## Starting another project
 
-Run `mise spawn example.com` from this repository to create a sibling checkout with project configuration and generated environment files. Create its GitHub repository and review its configuration and credentials before using it. Add it to `projects` in `~/.config/codemoto/config.json` so Mr. Moto manages its Linear cards. Downstream projects use the merge skill to bring in updates from Code Moto without replacing their history.
+Run `mise spawn example.com` from this repository to create a sibling checkout with project configuration and generated environment files. Create its GitHub repository and review its configuration and credentials before using it. Repository registration and scheduling are handled separately by [Mr. Moto](https://github.com/grahamotte/mr-moto). Downstream projects use the merge skill to bring in updates from Code Moto without replacing their history.
 
 ## Repository guide
 

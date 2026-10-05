@@ -42,14 +42,6 @@
     "region": "sfo3",
     "size": "s-1vcpu-2gb"
   },
-  "secrets": {
-    "development": "op://Projects/Little While Development",
-    "production": "op://Projects/Little While Production"
-  },
-  "linear": {
-    "workspace": "gotte",
-    "team": "LIT"
-  },
   "apps": {
     "build": "0.5.0",
     "contactEmail": "go@graham.lol",
