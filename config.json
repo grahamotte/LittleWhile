@@ -76,6 +76,18 @@
               "path": "assets/screenshots/iphone-large-focus.jpg"
             },
             {
+              "displayType": "APP_IPHONE_67",
+              "path": "assets/screenshots/iphone-large-mr-smiles.jpg"
+            },
+            {
+              "displayType": "APP_IPHONE_67",
+              "path": "assets/screenshots/iphone-large-settings.jpg"
+            },
+            {
+              "displayType": "APP_IPHONE_67",
+              "path": "assets/screenshots/iphone-large-history.jpg"
+            },
+            {
               "displayType": "APP_IPHONE_61",
               "path": "assets/screenshots/iphone-focus.jpg"
             },
