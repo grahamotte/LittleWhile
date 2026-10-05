@@ -37,7 +37,7 @@ Deployment, basis merges, and publishing use the project-specific instructions i
 
 ## Starting another project
 
-Run `mise spawn example.com` from this repository to create a sibling checkout with project configuration and generated environment files. Create its GitHub repository and review its configuration and credentials before using it. Repository registration and scheduling are handled separately by [Mr. Moto](https://github.com/grahamotte/mr-moto). Downstream projects use the merge skill to bring in updates from Code Moto without replacing their history.
+Run `mise spawn example.com` from this repository to create a sibling checkout with project configuration and generated environment files. Create its GitHub repository and review its configuration and credentials before using it. Repository registration and scheduling are handled separately by [Mr. Moto](https://github.com/grahamotte/MrMoto). Downstream projects use the merge skill to bring in updates from Code Moto without replacing their history.
 
 ## Repository guide
 
