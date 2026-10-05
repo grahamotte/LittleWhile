@@ -49,7 +49,7 @@ Run `mise spawn example.com` from this repository to create a sibling checkout w
 | `gems/` | Shared Ruby libraries |
 | `deploy/` | Infrastructure and deployment tooling |
 | `publish/` | App versioning, simulation, and publishing |
-| `manager/` | Secrets refresh, project creation, and Code Moto merges |
+| `manager/` | Project creation and Code Moto merges |
 | `scripts/` | Scripts behind mise tasks |
 
 See [manager](docs/manager.md) for how Code Moto works with Mr. Moto, [Apple credentials](docs/apple-credentials.md) for publishing setup, and [AGENTS.md](AGENTS.md) for contribution rules.
