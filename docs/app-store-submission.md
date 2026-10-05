@@ -8,7 +8,7 @@ Little While is an iPhone-only app for iOS 18 or later. Prepare a release with t
 
 The app includes `PrivacyInfo.xcprivacy` declaring no tracking or collected data and the `CA92.1` reason for accessing its own UserDefaults. Settings links to the public privacy policy.
 
-Support and marketing currently link to the public [support document](https://github.com/grahamotte/littlewhile.app/blob/master/docs/support.md). The [privacy policy](https://github.com/grahamotte/littlewhile.app/blob/master/docs/privacy-policy.md) is also publicly hosted in this repository. The littlewhile.app domain must resolve and serve these pages before switching the listing URLs to it.
+Support and marketing currently link to the public [support document](https://github.com/grahamotte/LittleWhile/blob/master/docs/support.md). The [privacy policy](https://github.com/grahamotte/LittleWhile/blob/master/docs/privacy-policy.md) is also publicly hosted in this repository. The littlewhile.app domain must resolve and serve these pages before switching the listing URLs to it.
 
 ## App-level settings
 
@@ -16,7 +16,7 @@ These settings are managed separately from the version metadata uploaded by the 
 
 - Primary category: Productivity.
 - Subtitle: Focus for a little while.
-- Privacy policy URL: https://github.com/grahamotte/littlewhile.app/blob/master/docs/privacy-policy.md
+- Privacy policy URL: https://github.com/grahamotte/LittleWhile/blob/master/docs/privacy-policy.md
 - Content rights: no third-party content.
 - Age rating: no restricted content, advertising, chat, public user-generated content, gambling, or unrestricted web access. Use the age rating calculated by Apple.
 - App Privacy: select “No, we do not collect data from this app” and publish the answers in App Store Connect. The public API does not expose this questionnaire.

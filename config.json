@@ -1,6 +1,6 @@
 {
   "domain": "littlewhile.app",
-  "githubRepo": "git@github.com:grahamotte/littlewhile.app.git",
+  "githubRepo": "git@github.com:grahamotte/LittleWhile.git",
   "database": "littlewhile",
   "site": {
     "title": "Code Moto",
@@ -54,13 +54,13 @@
     "demoAccountRequired": false,
     "description": "Set aside a little while for what matters.\n\nLittle While is a simple focus and rest timer for iPhone. Choose your durations, pick a theme, and start a small, intentional block of time.\n\n- Customize focus sessions from 1 to 120 minutes and optional rest periods.\n- Choose the clean Boring timer or the playful Mr Smiles theme.\n- Pause and resume whenever you need to.\n- Follow your timer on the Lock Screen and Dynamic Island with Live Activities on supported devices.\n- Get completion alerts with system alarms on iOS 26 or later, or local notifications when permitted.\n- Look back at saved runs and a monthly calendar of your focus time.\n\nNo account, ads, or tracking. Your settings and run history stay on your device.\n\nRequires iOS 18 or later.",
     "keywords": "pomodoro,focus,timer,productivity",
-    "marketingUrl": "https://github.com/grahamotte/littlewhile.app/blob/master/docs/support.md",
+    "marketingUrl": "https://github.com/grahamotte/LittleWhile/blob/master/docs/support.md",
     "name": "Little While",
     "notes": "No account, sign-in, purchases, or network connection is required. Open Settings (sliders button), choose a theme and focus/rest durations, and tap Start. Focus durations range from 1 to 120 minutes; rest can be disabled with 0 minutes. Pause and resume on the main screen. History (clock button) shows saved runs and the monthly activity calendar. The Privacy Policy link is at the bottom of Settings. Completion alerts use AlarmKit on iOS 26 or later when authorized, with local-notification fallback when permitted. Live Activities use Apple's system features on supported devices. Please allow the requested alarm/notification permissions to test background completion alerts.",
     "primaryLocale": "en-US",
     "promotionalText": "Focus for a little while.",
     "releaseType": "AFTER_APPROVAL",
-    "supportUrl": "https://github.com/grahamotte/littlewhile.app/blob/master/docs/support.md",
+    "supportUrl": "https://github.com/grahamotte/LittleWhile/blob/master/docs/support.md",
     "targets": {
       "apple": {
         "ios": {

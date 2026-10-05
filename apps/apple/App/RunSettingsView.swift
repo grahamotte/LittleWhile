@@ -55,7 +55,7 @@ struct RunSettingsView: View {
                         }
                     }
                     .padding(.horizontal, 28)
-                    Link("Privacy Policy", destination: URL(string: "https://github.com/grahamotte/littlewhile.app/blob/master/docs/privacy-policy.md")!)
+                    Link("Privacy Policy", destination: URL(string: "https://github.com/grahamotte/LittleWhile/blob/master/docs/privacy-policy.md")!)
                         .font(.footnote)
                         .padding(.horizontal, 28)
                 }
