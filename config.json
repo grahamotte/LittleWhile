@@ -3,8 +3,8 @@
   "githubRepo": "git@github.com:grahamotte/LittleWhile.git",
   "database": "littlewhile",
   "site": {
-    "title": "Code Moto",
-    "description": "code moto is the base for other projects",
+    "title": "Little While",
+    "description": "A Pomodoro focus and rest timer for iPhone.",
     "themeColor": "oklch(0 0 0)"
   },
   "subdomains": [
@@ -43,7 +43,7 @@
     "size": "s-1vcpu-2gb"
   },
   "apps": {
-    "build": "0.5.0",
+    "build": "1.0.3",
     "contactEmail": "go@graham.lol",
     "contactFirstName": "Graham",
     "contactLastName": "Otte",
@@ -52,13 +52,13 @@
     "demoAccountName": "",
     "demoAccountPassword": "",
     "demoAccountRequired": false,
-    "description": "Set aside a little while for what matters.\n\nLittle While is a simple focus and rest timer for iPhone. Choose your durations, pick a theme, and start a small, intentional block of time.\n\n- Customize focus sessions from 1 to 120 minutes and optional rest periods.\n- Choose the clean Boring timer or the playful Mr Smiles theme.\n- Pause and resume whenever you need to.\n- Follow your timer on the Lock Screen and Dynamic Island with Live Activities on supported devices.\n- Get completion alerts with system alarms on iOS 26 or later, or local notifications when permitted.\n- Look back at saved runs and a monthly calendar of your focus time.\n\nNo account, ads, or tracking. Your settings and run history stay on your device.\n\nRequires iOS 18 or later.",
-    "keywords": "pomodoro,focus,timer,productivity",
+    "description": "Little While is a Pomodoro focus timer built around cycles of work and rest. Set your focus and break lengths, loop them automatically, follow the countdown from your Lock Screen, and see your focus time add up on a monthly calendar.\n\nFOCUS + REST CYCLES\nThe Pomodoro method works because effort is paired with a real break. Set a focus block from 1 to 120 minutes and a rest period from 0 to 120 minutes. When focus ends, Little While alerts you and moves straight into rest, so the break is part of the plan instead of an afterthought.\n\nAUTOMATIC LOOPS\nTurn on Loop and the next focus block starts as soon as rest ends. Focus and rest repeat until you stop, and every completed cycle is counted, so a whole morning of deep work runs from a single tap.\n\nA PAUSE THAT KEEPS YOU GOING\nPausing is intentionally short. A paused timer shows a one-minute countdown and then resumes on its own, so a quick interruption never quietly turns into an abandoned session. When you are truly done, stop the run and your progress is saved.\n\nHISTORY AND CALENDAR\nEvery run is saved with its time, theme, progress, and completed cycles. A monthly calendar marks each day with a dot sized by how much you focused, and you can swipe back through past months to see your streaks. Delete any run you don't want to keep.\n\nPLAYFUL THEMES\n- Mr Smiles: a cheerful smiley face that bounces around your screen while you work. Grab him and flick him off the walls.\n- He Loves Me: a hand-drawn daisy that drops its petals one by one as the minutes pass. He loves me... he loves me not.\nPrefer to keep it simple? There's a minimal countdown too.\n\nLOCK SCREEN AND DYNAMIC ISLAND\nLive Activities show your remaining time and whether you are in focus or rest on the Lock Screen and in the Dynamic Island, so your phone can stay face down while you work.\n\nALERTS YOU WON'T MISS\nOn iOS 26 or later, Little While schedules system alarms for the end of each focus and rest period that sound even in Silent mode or a Focus, and you can dismiss them right from the alert. Otherwise it uses local notifications when permitted.\n\nPRIVATE BY DESIGN\nNo account, ads, analytics, or tracking. Your settings and history stay on your device.\n\nIncludes VoiceOver support, adjustable duration controls, and Reduce Motion support.\n\nRequires iOS 18 or later.",
+    "keywords": "pomodoro,focus,timer,study,work,break,rest,interval,productivity,live activity,calendar,habit",
     "marketingUrl": "https://github.com/grahamotte/LittleWhile/blob/master/docs/support.md",
     "name": "Little While",
-    "notes": "No account, sign-in, purchases, or network connection is required. Open Settings (sliders button), choose a theme and focus/rest durations, and tap Start. Focus durations range from 1 to 120 minutes; rest can be disabled with 0 minutes. Pause and resume on the main screen. History (clock button) shows saved runs and the monthly activity calendar. The Privacy Policy link is at the bottom of Settings. Completion alerts use AlarmKit on iOS 26 or later when authorized, with local-notification fallback when permitted. Live Activities use Apple's system features on supported devices. Please allow the requested alarm/notification permissions to test background completion alerts.",
+    "notes": "Hi, thanks for taking another look at Little While. There's no account or sign-in and nothing needs a network connection. Please allow the notification and alarm prompts when they come up, otherwise you won't hear the end-of-timer alerts.\n\nLittle While is a Pomodoro timer, so the whole idea is working in cycles: a focus block, then a break, then another focus block. Here's how to see the main features.\n\nFocus and rest: tap the sliders button in the top left to open Settings. Set Focus and Rest with the two dials (rest can be 0 if you just want a single timer) and tap Start. I'd suggest 1 min focus and 1 min rest so you're not waiting around. When focus ends you get an alert and it goes right into the rest period.\n\nLooping: in Settings, turn on Loop before you hit Start. When rest ends the next focus block starts on its own, and it keeps going until you tap stop (top right). History shows how many cycles you got through.\n\nPause: this one is on purpose so I want to call it out. If you pause a running timer it doesn't stay paused forever. You get a one minute \"Resuming in\" countdown and then it starts back up by itself. The point of a Pomodoro is to not lose the cycle, and in my experience a paused timer usually just gets forgotten. You can tap play to resume early or stop to end the run.\n\nThemes: the theme picker is at the top of Settings. Mr Smiles is a little smiley face that bounces around the screen while you work, and you can grab him and flick him around. He Loves Me is a daisy that drops a petal at a time as the timer runs down.\n\nHistory: the clock button in the top left opens History. There's a month calendar at the top where each day's dot gets bigger the more you focused that day (use the arrows or swipe to change months), and your past runs are listed underneath. Swipe left on an old run to delete it.\n\nLock Screen: once a timer is running, lock the phone or go to the Home Screen and you'll see the countdown on the Lock Screen, and in the Dynamic Island on phones that have one. It also shows whether you're in focus or rest.\n\nAlarms: on iOS 26 and up the end-of-period alerts use AlarmKit, so they go off even in Silent mode or a Focus. On older versions it falls back to regular notifications.\n\nA couple of small things: the History and Settings buttons hide while a run is going so you're not tempted to fiddle with it, just stop the run to get them back. You can also long press the play button to start over. The privacy policy link is at the bottom of Settings.\n\nThanks!\nGraham",
     "primaryLocale": "en-US",
-    "promotionalText": "Focus for a little while.",
+    "promotionalText": "Pomodoro focus and rest cycles that loop automatically, a pause that keeps you on track, a focus calendar, playful themes, and Live Activities on your Lock Screen.",
     "releaseType": "AFTER_APPROVAL",
     "supportUrl": "https://github.com/grahamotte/LittleWhile/blob/master/docs/support.md",
     "targets": {
@@ -73,19 +73,31 @@
           "screenshots": [
             {
               "displayType": "APP_IPHONE_67",
-              "path": "assets/screenshots/iphone-large-focus.jpg"
+              "path": "assets/screenshots/iphone-large-settings.jpg"
             },
             {
-              "displayType": "APP_IPHONE_61",
-              "path": "assets/screenshots/iphone-focus.jpg"
+              "displayType": "APP_IPHONE_67",
+              "path": "assets/screenshots/iphone-large-he-loves-me.jpg"
             },
             {
-              "displayType": "APP_IPHONE_61",
-              "path": "assets/screenshots/iphone-mr-smiles.jpg"
+              "displayType": "APP_IPHONE_67",
+              "path": "assets/screenshots/iphone-large-mr-smiles.jpg"
+            },
+            {
+              "displayType": "APP_IPHONE_67",
+              "path": "assets/screenshots/iphone-large-history.jpg"
             },
             {
               "displayType": "APP_IPHONE_61",
               "path": "assets/screenshots/iphone-settings.jpg"
+            },
+            {
+              "displayType": "APP_IPHONE_61",
+              "path": "assets/screenshots/iphone-he-loves-me.jpg"
+            },
+            {
+              "displayType": "APP_IPHONE_61",
+              "path": "assets/screenshots/iphone-mr-smiles.jpg"
             },
             {
               "displayType": "APP_IPHONE_61",
@@ -100,7 +112,7 @@
         }
       }
     },
-    "version": "0.5.0",
-    "whatsNew": "Focus with customizable focus and rest timers, completion alerts, Live Activities, and playful themes including Mr Smiles. Start a timer directly from settings and track your focus time with saved run history and a monthly activity calendar. Paused timers now resume automatically after one minute. Focus and rest cycles now repeat until you stop them, and history and settings are hidden while a run is active."
+    "version": "1.0.3",
+    "whatsNew": "Little While 1.0: Pomodoro focus and rest cycles, automatic loops, a one-minute pause that keeps you on track, run history with a monthly focus calendar, the Mr Smiles and He Loves Me themes, Live Activities, and completion alarms."
   }
 }
