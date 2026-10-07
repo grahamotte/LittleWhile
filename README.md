@@ -52,4 +52,4 @@ Run `mise spawn example.com` from this repository to create a sibling checkout w
 | `manager/` | Project creation and Code Moto merges |
 | `scripts/` | Scripts behind mise tasks |
 
-See [manager](docs/manager.md) for how Code Moto works with Mr. Moto, [Apple credentials](docs/apple-credentials.md) for publishing setup, and [AGENTS.md](AGENTS.md) for contribution rules.
+See [manager](docs/manager.md) for how Code Moto works with Mr. Moto, [Apple credentials](docs/apple-credentials.md) for publishing setup, [logging](docs/logging.md) for Grafana logs, and [AGENTS.md](AGENTS.md) for contribution rules.
