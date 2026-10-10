@@ -32,6 +32,7 @@ Non-secret project settings live in `config.json`, including the domain, GitHub 
 | `mise console` | Open the Rails development console |
 | `mise simulate iphone` | Launch the iPhone app in a simulator |
 | `mise xcode` | Open the Apple app project |
+| `mise keychain` | Restore keychain settings left by an interrupted signing run; `--repair` resets the login keychain |
 
 Deployment, basis merges, and publishing use the project-specific instructions in [.agents/skills](.agents/skills). Mr. Moto owns card tracking, enqueueing, and the review workflow.
 
