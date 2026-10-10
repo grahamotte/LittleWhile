@@ -73,4 +73,10 @@ For card work, use Mr. Moto's `mr` CLI: run `mr card claim <CARD>` and follow it
 
 ## Repo Specific
 
+### Deployment
+
+This repository is not deployed. Do not run `mise deploy` or the `deploy` skill. The `deploy/` tooling is inherited from Code Moto and unused.
+
+### Little While
+
 Little While is an iOS focus timer for setting aside a small, intentional block of time. It supports configurable timer durations and themes, persistent run history, system alarms with local-notification fallback, and a Live Activity displayed on the Lock Screen and Dynamic Island.
