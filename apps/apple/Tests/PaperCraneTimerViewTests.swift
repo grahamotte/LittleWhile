@@ -4,16 +4,54 @@ import XCTest
 
 final class PaperCraneTimerViewTests: XCTestCase {
     func testFlatPaperKeepsItsColorAndTiltedPaperShadesOrGlows() {
-        XCTAssertEqual(PaperCranePalette.tone(.outside, shade: 1), PaperCranePalette.outside)
-        XCTAssertEqual(PaperCranePalette.tone(.inside, shade: 1), PaperCranePalette.inside)
-        XCTAssertGreaterThan(PaperCranePalette.inside.x, PaperCranePalette.outside.x)
+        let red = PaperCranePalette.papers[0]
+        XCTAssertEqual(PaperCranePalette.tone(.outside, shade: 1), red.outside)
+        XCTAssertEqual(PaperCranePalette.tone(.inside, shade: 1), red.inside)
 
         let shaded = PaperCranePalette.tone(.outside, shade: 0.6)
-        XCTAssertEqual(shaded.x, PaperCranePalette.outside.x * 0.6, accuracy: 0.0001)
+        XCTAssertEqual(shaded.x, red.outside.x * 0.6, accuracy: 0.0001)
 
         let glowing = PaperCranePalette.tone(.outside, shade: 1.3)
-        XCTAssertGreaterThan(glowing.y, PaperCranePalette.outside.y)
+        XCTAssertGreaterThan(glowing.y, red.outside.y)
         XCTAssertLessThanOrEqual(glowing.x, 1)
+
+        let blue = PaperCranePalette.papers[5]
+        XCTAssertEqual(PaperCranePalette.tone(.outside, shade: 1, paper: blue), blue.outside)
+        XCTAssertEqual(PaperCranePalette.tone(.inside, shade: 1, paper: blue), blue.inside)
+    }
+
+    func testTenDistinctPapersEachWithALighterInsideAndDarkerEdge() {
+        let papers = PaperCranePalette.papers
+        XCTAssertEqual(papers.count, 10)
+        XCTAssertEqual(papers[0].outside, SIMD3(0.8, 0.255, 0.224))
+        for (index, paper) in papers.enumerated() {
+            XCTAssertFalse(papers[..<index].contains(paper))
+            for channel in 0..<3 {
+                XCTAssertGreaterThan(paper.inside[channel], paper.outside[channel])
+                XCTAssertLessThan(paper.edge[channel], paper.outside[channel])
+            }
+        }
+    }
+
+    func testFirstCraneOfEveryRunIsRedAndEachNextCraneChangesColor() {
+        for _ in 0..<20 {
+            let run = UUID()
+            XCTAssertEqual(PaperCranePalette.paper(run: run, crane: 0), PaperCranePalette.papers[0])
+            XCTAssertEqual(PaperCranePalette.paper(run: run, crane: -3), PaperCranePalette.papers[0])
+            for crane in 1..<30 {
+                XCTAssertNotEqual(PaperCranePalette.paper(run: run, crane: crane), PaperCranePalette.paper(run: run, crane: crane - 1))
+            }
+        }
+    }
+
+    func testCraneColorsAreStableForARunAndSpreadAcrossThePalette() {
+        let run = UUID(uuidString: "6F9619FF-8B86-D011-B42D-00C04FC964FF")!
+        let sequence = (0..<200).map { PaperCranePalette.paper(run: run, crane: $0) }
+        XCTAssertEqual(sequence, (0..<200).map { PaperCranePalette.paper(run: run, crane: $0) })
+        XCTAssertEqual(Set(sequence.map(\.outside.x)).count, Set(PaperCranePalette.papers.map(\.outside.x)).count)
+
+        let other = UUID(uuidString: "0B1E5D2A-4C3F-4E8B-9A7D-2F6C1E0B9D84")!
+        XCTAssertNotEqual(sequence, (0..<200).map { PaperCranePalette.paper(run: other, crane: $0) })
     }
 
     func testArrowheadOpensBackTowardTheTail() {

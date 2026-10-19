@@ -134,6 +134,14 @@ struct PaperCrane {
         return max(0, cycle) * count + min(count, max(0, reached))
     }
 
+    static func crane(elapsed: TimeInterval, goalSeconds: Int, cycle: Int = 0) -> Int {
+        let count = segments(goalSeconds: goalSeconds)
+        guard count > 0 else { return 0 }
+        let length = min(minute, TimeInterval(goalSeconds))
+        let focus = max(0, elapsed.isFinite ? elapsed : 0)
+        return max(0, cycle) * count + min(count - 1, Int(focus / length))
+    }
+
     var length: TimeInterval {
         min(Self.minute, TimeInterval(max(0, key.goalSeconds)))
     }
