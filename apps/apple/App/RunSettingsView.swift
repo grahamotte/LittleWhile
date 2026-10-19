@@ -41,20 +41,14 @@ struct RunSettingsView: View {
         .frame(maxHeight: .infinity, alignment: .top)
         .background(.background)
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            VStack(spacing: 12) {
-                GlassActionButton(title: "Start") {
-                    onStart(selectedMinute, selectedRestMinute, loops, selectedTheme)
-                    dismiss()
-                }
-                .frame(maxWidth: .infinity)
-
-                Link("Privacy Policy", destination: URL(string: "https://github.com/grahamotte/LittleWhile/blob/master/docs/privacy-policy.md")!)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+            GlassActionButton(title: "Start") {
+                onStart(selectedMinute, selectedRestMinute, loops, selectedTheme)
+                dismiss()
             }
+            .frame(maxWidth: .infinity)
             .padding(.horizontal, 28)
             .padding(.top, 12)
-            .padding(.bottom, 8)
+            .padding(.bottom, 16)
             .background(.background)
         }
         .sensoryFeedback(.selection, trigger: selectedMinute)
