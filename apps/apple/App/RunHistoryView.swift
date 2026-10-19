@@ -42,6 +42,14 @@ struct RunHistoryView: View {
                                 }
                         }
                     }
+
+                    Link("Privacy Policy", destination: URL(string: "https://github.com/grahamotte/LittleWhile/blob/master/docs/privacy-policy.md")!)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity)
+                        .listRowInsets(EdgeInsets(top: 18, leading: 24, bottom: 24, trailing: 24))
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(Color.clear)
                 }
                 .listStyle(.plain)
                 .scrollContentBackground(.hidden)
