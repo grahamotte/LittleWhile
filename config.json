@@ -36,7 +36,7 @@
     "size": "s-1vcpu-2gb"
   },
   "apps": {
-    "build": "1.0.3",
+    "build": "1.1.0",
     "contactEmail": "go@graham.lol",
     "contactFirstName": "Graham",
     "contactLastName": "Otte",
@@ -105,7 +105,7 @@
         }
       }
     },
-    "version": "1.0.3",
-    "whatsNew": "Little While 1.0: Pomodoro focus and rest cycles, automatic loops, a one-minute pause that keeps you on track, run history with a monthly focus calendar, the Mr Smiles and He Loves Me themes, Live Activities, and completion alarms."
+    "version": "1.1.0",
+    "whatsNew": "New 千羽鶴 (Paper Crane) theme: a square of paper folds into an origami crane as you focus, one crane for every focus minute, with a lifetime count of the cranes you've folded."
   }
 }
