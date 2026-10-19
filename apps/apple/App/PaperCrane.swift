@@ -407,9 +407,8 @@ struct PaperCrane {
         var result: [Int] = []
         while !remaining.isEmpty {
             let ready = remaining.filter { blockers[$0] == 0 }
-            let next = ready.isEmpty
-                ? remaining.min { (blockers[$0], keys[$0]) < (blockers[$1], keys[$1]) } ?? 0
-                : ready.min { keys[$0] < keys[$1] } ?? 0
+            let candidates = ready.isEmpty ? source(remaining, after: after) : Array(ready)
+            let next = candidates.min { (blockers[$0], keys[$0]) < (blockers[$1], keys[$1]) } ?? 0
             remaining.remove(next)
             result.append(next)
             for front in after[next] where remaining.contains(front) {
@@ -417,6 +416,52 @@ struct PaperCrane {
             }
         }
         return result
+    }
+
+    private static func source(_ remaining: Set<Int>, after: [[Int]]) -> [Int] {
+        var counter = 0
+        var indices = Array(repeating: -1, count: after.count)
+        var lows = Array(repeating: 0, count: after.count)
+        var stack: [Int] = []
+        var stacked = Set<Int>()
+        var membership = Array(repeating: -1, count: after.count)
+        var components: [[Int]] = []
+        func visit(_ node: Int) {
+            indices[node] = counter
+            lows[node] = counter
+            counter += 1
+            stack.append(node)
+            stacked.insert(node)
+            for next in after[node] where remaining.contains(next) {
+                if indices[next] < 0 {
+                    visit(next)
+                    lows[node] = min(lows[node], lows[next])
+                } else if stacked.contains(next) {
+                    lows[node] = min(lows[node], indices[next])
+                }
+            }
+            guard lows[node] == indices[node] else { return }
+            var members: [Int] = []
+            while let top = stack.popLast() {
+                stacked.remove(top)
+                membership[top] = components.count
+                members.append(top)
+                if top == node {
+                    break
+                }
+            }
+            components.append(members)
+        }
+        for node in remaining.sorted() where indices[node] < 0 {
+            visit(node)
+        }
+        var entered = Array(repeating: false, count: components.count)
+        for node in remaining {
+            for next in after[node] where remaining.contains(next) && membership[next] != membership[node] {
+                entered[membership[next]] = true
+            }
+        }
+        return components.indices.first { !entered[$0] }.map { components[$0] } ?? Array(remaining)
     }
 
     private static func plane(_ points: [SIMD3<Double>]) -> (SIMD3<Double>, Double) {
@@ -801,27 +846,34 @@ extension PaperCraneWorkshop {
         let neckCorner = corners.first { corner in
             facets.contains { $0.group == "neck" && $0.paper.contains { simd_distance($0, corner) < 0.000_01 } }
         } ?? mirror.0
-        let faces = facets.indices.filter { facets[$0].group == "body" && touches($0, Self.origin) }
-        let wings = facets.indices.filter { touches($0, tip) }
-
+        let flaps = facets.indices.filter { touches($0, tip) }
+        let ceiling = flaps.filter(onFront).map { facets[$0].layer }.max() ?? 0
+        let floor = flaps.filter { !onFront($0) }.map { facets[$0].layer }.min() ?? 0
+        let pinned = facets.indices.filter { facets[$0].group != "wing" && (facets[$0].layer > ceiling || facets[$0].layer < floor) }
+        let shoulder = pinned.flatMap { facets[$0].points }.map(\.y).min() ?? Self.k
+        let hinge = SIMD3<Double>(0, shoulder, 0)
         let across = SIMD3<Double>(1, 0, 0)
+        cut(facets.indices.filter { facets[$0].group == "wing" || (facets[$0].group == "body" && touches($0, Self.origin)) }, hinge - across, hinge + across)
+        let faces = facets.indices.filter { facets[$0].group == "body" && touches($0, Self.origin) && facets[$0].centroid.y < shoulder }
+        let wings = facets.indices.filter { facets[$0].group == "wing" && facets[$0].centroid.y < shoulder }
+
         let faceFront = faces.filter(onFront)
         let wingFront = wings.filter(onFront)
         let faceCenter = center(faceFront)
         let tilt = PaperCranePose.turn(around: Self.origin, axis: across, angle: 0.2).apply(faceCenter).z > faceCenter.z ? 1.0 : -1.0
         let wingCenter = center(wingFront)
-        let lower = PaperCranePose.turn(around: Self.kiteLeft, axis: across, angle: 0.2).apply(wingCenter).z > wingCenter.z ? 1.0 : -1.0
+        let lower = PaperCranePose.turn(around: hinge, axis: across, angle: 0.2).apply(wingCenter).z > wingCenter.z ? 1.0 : -1.0
         func face(_ sign: Double) -> (Double) -> PaperCranePose {
             { PaperCranePose.turn(around: Self.origin, axis: across, angle: sign * tilt * Self.lean * $0) }
         }
         func wing(_ sign: Double) -> (Double) -> PaperCranePose {
-            { PaperCranePose.turn(around: Self.kiteLeft, axis: across, angle: sign * lower * Self.drop * $0).then(face(sign)($0)) }
+            { PaperCranePose.turn(around: hinge, axis: across, angle: sign * lower * Self.drop * $0).then(face(sign)($0)) }
         }
         settle(
             drivers: [
                 Driver(facets: faceFront, pose: face(1), group: nil),
                 Driver(facets: faces.filter { !onFront($0) }, pose: face(-1), group: nil),
-                Driver(facets: wingFront, pose: wing(1), group: "w1", crease: (Self.kiteRight, Self.kiteLeft), arrow: true),
+                Driver(facets: wingFront, pose: wing(1), group: "w1", crease: (hinge + across, hinge - across), arrow: true),
                 Driver(facets: wings.filter { !onFront($0) }, pose: wing(-1), group: "w2"),
             ],
             mirror: mirror,

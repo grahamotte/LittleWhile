@@ -116,6 +116,19 @@ final class PaperCraneTests: XCTestCase {
         XCTAssertEqual(PaperCrane.order([square, square.map { $0 + SIMD3(5, 0, 0) }], stacks: [0.2, 0.1], fixed: [false, false]), [1, 0])
     }
 
+    func testVisibilityBreaksOverlapCyclesWithoutReorderingPaperBeyondThem() {
+        let bottom = [SIMD3<Double>(0, 0, 0), SIMD3(4, 0, 1), SIMD3(4, 1, 1), SIMD3(0, 1, 0)]
+        let right = [SIMD3<Double>(3, 0, 0.5), SIMD3(4, 0, 0.5), SIMD3(4, 4, 0.5), SIMD3(3, 4, 0.5)]
+        let diagonal = [SIMD3<Double>(0.5, 0, 0.7625), SIMD3(4, 3.5, 0.2375), SIMD3(3.5, 4, 0.2375), SIMD3(0, 0.5, 0.7625)]
+        let patch = [SIMD3<Double>(3.2, 1.5, 2), SIMD3(3.8, 1.5, 2), SIMD3(3.8, 2, 2), SIMD3(3.2, 2, 2)]
+
+        let order = PaperCrane.order([bottom, right, diagonal, patch, patch], stacks: [0, 0, 0, -9, -10], fixed: Array(repeating: false, count: 5))
+
+        XCTAssertEqual(order.sorted(), [0, 1, 2, 3, 4])
+        XCTAssertLessThan(order.firstIndex(of: 1) ?? 5, order.firstIndex(of: 4) ?? -1)
+        XCTAssertLessThan(order.firstIndex(of: 4) ?? 5, order.firstIndex(of: 3) ?? -1)
+    }
+
     private func shared(_ first: PaperCraneFacet, _ second: PaperCraneFacet) -> [(SIMD2<Double>, SIMD2<Double>)] {
         var segments: [(SIMD2<Double>, SIMD2<Double>)] = []
         for corner in first.paper.indices {
@@ -166,6 +179,17 @@ final class PaperCraneTests: XCTestCase {
             }
         }
         XCTAssertGreaterThan(Double(outside) / Double(visible), 0.85)
+    }
+
+    func testWingsFoldDownAlongTheLowestLineTheEarsLeaveFree() {
+        let fold = PaperCrane.folds[PaperCrane.foldCount - 1]
+        let narrowing = tan(Double.pi / 16)
+        let shoulder = narrowing / (1 + narrowing)
+        let wings = fold.end.indices.filter { ["w1", "w2"].contains(fold.end[$0].group) }
+        let body = fold.end.indices.filter { !["w1", "w2", "neck", "tail"].contains(fold.end[$0].group) }
+
+        XCTAssertEqual(wings.flatMap { fold.pieces[$0].facet.points }.map(\.y).max() ?? 0, shoulder, accuracy: 0.000_1)
+        XCTAssertGreaterThan(body.flatMap { fold.pieces[$0].facet.points }.map(\.y).max() ?? 0, shoulder + 0.1)
     }
 
     func testFinishedCraneSpreadsItsWingsAroundARaisedNeckAndTail() {
