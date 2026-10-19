@@ -1,5 +1,6 @@
 import CoreGraphics
 import XCTest
+import simd
 @testable import App
 
 final class PaperCraneTests: XCTestCase {
@@ -23,25 +24,32 @@ final class PaperCraneTests: XCTestCase {
         XCTAssertEqual(PaperCraneLayout(size: CGSize(width: CGFloat.nan, height: -5), top: 10).frame.width, 0)
     }
 
-    func testSheetStartsAsAWhiteSquare() {
+    func testSheetStartsAsAWhiteSquareDiamond() {
         let sheet = PaperCraneWorkshop.sheet()
 
-        XCTAssertEqual(sheet.map { PaperCraneGeometry.area($0.points) }.reduce(0, +), 2, accuracy: 0.0001)
-        XCTAssertTrue(sheet.allSatisfy { $0.visibleFace == .white })
+        XCTAssertEqual(sheet.count, 1)
+        XCTAssertEqual(PaperCraneGeometry.area(sheet[0].points), 2, accuracy: 0.0001)
+        XCTAssertEqual(sheet[0].visibleFace, .white)
+        XCTAssertEqual(sheet[0].edges, [.edge, .edge, .edge, .edge])
     }
 
-    func testEveryFoldKeepsAllOfThePaper() {
-        XCTAssertEqual(PaperCrane.foldCount, 15)
-        for fold in PaperCrane.folds {
-            for progress in [0.0, 1.0] {
-                let area = fold.pieces.map { PaperCraneGeometry.area($0.points(at: progress)) }.reduce(0, +)
-                XCTAssertEqual(area, 2, accuracy: 0.0001)
+    func testRigidFoldsNeverStretchThePaperAndTheFinalShapingOnlyFlexesIt() {
+        XCTAssertEqual(PaperCrane.foldCount, 17)
+        for (number, fold) in PaperCrane.folds.enumerated() {
+            let shaping = number == PaperCrane.foldCount - 1
+            for progress in stride(from: 0.0, through: 1.0, by: 0.1) {
+                let area = fold.pieces.indices.map { PaperCraneGeometry.area(fold.points($0, at: progress)) }.reduce(0, +)
+                XCTAssertEqual(area, 2, accuracy: shaping ? 0.04 : 0.0001)
             }
-            for piece in fold.pieces {
-                if case .rotate = piece.move {
-                    XCTAssertEqual(PaperCraneGeometry.area(piece.points(at: 0.5)), PaperCraneGeometry.area(piece.facet.points), accuracy: 0.0001)
+            for index in fold.pieces.indices {
+                let start = fold.pieces[index].facet.points
+                let moved = fold.points(index, at: 0.5)
+                for corner in start.indices {
+                    let next = (corner + 1) % start.count
+                    XCTAssertEqual(simd_distance(moved[corner], moved[next]), simd_distance(start[corner], start[next]), accuracy: shaping ? 0.07 : 0.0001)
                 }
             }
+            XCTAssertEqual(fold.pieces.contains { !$0.track.isEmpty }, shaping)
         }
         for (fold, next) in zip(PaperCrane.folds, PaperCrane.folds.dropFirst()) {
             let before = fold.end.flatMap(\.points)
@@ -54,36 +62,146 @@ final class PaperCraneTests: XCTestCase {
         }
     }
 
-    func testFinishedCraneIsColoredAllOverAndStandsInThreeDimensions() {
-        let crane = PaperCrane.folds[PaperCrane.foldCount - 1].end
+    func testRigidFoldsNeverTearThePaperBeyondHiddenMirrorSeparations() {
+        var mirrored = 0
+        for fold in PaperCrane.folds.dropLast() {
+            for progress in stride(from: 0.0, through: 1.0, by: 0.05) {
+                let posed = fold.pieces.indices.map { fold.pieces[$0].facet.moved(by: fold.pose($0, at: progress)) }
+                for first in posed.indices {
+                    for second in posed.indices where second > first && PaperCraneWorkshop.near(posed[first].paper, posed[second].paper) {
+                        for (start, end) in shared(posed[first], posed[second]) {
+                            for point in [start, end] {
+                                let a = posed[first].place(point)
+                                let b = posed[second].place(point)
+                                if abs(a.x - b.x) < 0.000_1, abs(a.y - b.y) < 0.000_1, abs(a.z + b.z) < 0.000_1, abs(a.z) > 0.001 {
+                                    mirrored += 1
+                                } else {
+                                    XCTAssertLessThan(simd_distance(a, b), 0.005)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        XCTAssertGreaterThan(mirrored, 0)
+    }
 
-        XCTAssertTrue(crane.allSatisfy { $0.front == .color && $0.back == .color })
-        XCTAssertTrue(Set(crane.map(\.group)).isSuperset(of: ["w1", "w2", "neck", "tail"]))
-        XCTAssertGreaterThan(crane.flatMap(\.points).map(\.z).max() ?? 0, 0.3)
-        XCTAssertLessThan(crane.flatMap(\.points).map(\.z).min() ?? 0, -0.3)
+    func testFinalShapingKeepsEverySharedCornerJoined() throws {
+        let fold = try XCTUnwrap(PaperCrane.folds.last)
+        for progress in [0.3, 0.7, 1.0] {
+            var corners: [SIMD2<Int64>: SIMD3<Double>] = [:]
+            for index in fold.pieces.indices {
+                let points = fold.points(index, at: progress)
+                for (paper, point) in zip(fold.pieces[index].facet.paper, points) {
+                    let key = SIMD2(Int64((paper.x * 1_000_000).rounded()), Int64((paper.y * 1_000_000).rounded()))
+                    if let known = corners[key] {
+                        XCTAssertLessThan(simd_distance(known, point), 0.000_001)
+                    } else {
+                        corners[key] = point
+                    }
+                }
+            }
+        }
+    }
+
+    func testVisibilityDrawsNearerPaperLastAndKeepsStacksInOrder() {
+        let back = [SIMD3<Double>(0, 0, -1), SIMD3(1, 0, -1), SIMD3(1, 1, -1), SIMD3(0, 1, -1)]
+        let tilted = [SIMD3<Double>(0.2, 0.2, 0), SIMD3(1.2, 0.2, 0.2), SIMD3(1.2, 1.2, 0.2), SIMD3(0.2, 1.2, 0)]
+        XCTAssertEqual(PaperCrane.order([tilted, back], stacks: [0, 0], fixed: [false, false]), [1, 0])
+
+        let square = [SIMD3<Double>(0, 0, 0), SIMD3(1, 0, 0), SIMD3(1, 1, 0), SIMD3(0, 1, 0)]
+        XCTAssertEqual(PaperCrane.order([square, square, square], stacks: [0.3, 0.1, 0.2], fixed: [false, false, false]), [1, 2, 0])
+        XCTAssertEqual(PaperCrane.order([square, back], stacks: [-5, 0], fixed: [true, false]), [0, 1])
+        XCTAssertEqual(PaperCrane.order([square, square.map { $0 + SIMD3(5, 0, 0) }], stacks: [0.2, 0.1], fixed: [false, false]), [1, 0])
+    }
+
+    private func shared(_ first: PaperCraneFacet, _ second: PaperCraneFacet) -> [(SIMD2<Double>, SIMD2<Double>)] {
+        var segments: [(SIMD2<Double>, SIMD2<Double>)] = []
+        for corner in first.paper.indices {
+            let p = first.paper[corner]
+            let q = first.paper[(corner + 1) % first.paper.count]
+            let direction = simd_normalize(q - p)
+            let length = simd_distance(p, q)
+            for other in second.paper.indices {
+                let r = second.paper[other]
+                let s = second.paper[(other + 1) % second.paper.count]
+                guard PaperCraneGeometry.overlaps(p, q, r, s) else { continue }
+                let lower = max(0, min(simd_dot(r - p, direction), simd_dot(s - p, direction)))
+                let upper = min(length, max(simd_dot(r - p, direction), simd_dot(s - p, direction)))
+                segments.append((p + direction * lower, p + direction * upper))
+            }
+        }
+        return segments
+    }
+
+    func testEachBaseShowsTheColoredSideOutside() {
+        let crane = crane
+        func front(_ elapsed: TimeInterval) -> PaperCraneFace? {
+            crane.scene(elapsed: elapsed, restSeconds: 300, settled: true).polygons.last?.face
+        }
+
+        XCTAssertEqual(front(0), .white)
+        XCTAssertEqual(front(crane.start(0) + 0.1), .color)
+        XCTAssertEqual(front(crane.start(4) + 0.1), .color)
+        XCTAssertEqual(front(crane.start(9) + 0.1), .color)
+        XCTAssertEqual(front(crane.span + 1), .color)
+    }
+
+    func testFinishedCraneSpreadsItsWingsAroundARaisedNeckAndTail() {
+        let crane = PaperCrane.folds[PaperCrane.foldCount - 1].end
+        let groups = Set(crane.map(\.group))
+
+        XCTAssertTrue(groups.isSuperset(of: ["w1", "w2", "neck", "tail"]))
+        XCTAssertGreaterThan(crane.filter { $0.group == "w1" }.flatMap(\.points).map(\.z).max() ?? 0, 0.3)
+        XCTAssertLessThan(crane.filter { $0.group == "w2" }.flatMap(\.points).map(\.z).min() ?? 0, -0.3)
         let neck = crane.filter { $0.group == "neck" }.flatMap(\.points)
         let tail = crane.filter { $0.group == "tail" }.flatMap(\.points)
-        XCTAssertLessThan(neck.map(\.x).min() ?? 0, -0.3)
-        XCTAssertGreaterThan(tail.map(\.x).max() ?? 0, 0.3)
+        XCTAssertLessThan(neck.map(\.x).min() ?? 0, -0.25)
+        XCTAssertLessThan(neck.map(\.y).min() ?? 0, 0)
+        XCTAssertGreaterThan(tail.map(\.x).max() ?? 0, 0.25)
         XCTAssertLessThan(tail.map(\.y).min() ?? 0, 0)
         XCTAssertNotEqual(PaperCrane.folds[PaperCrane.foldCount - 1].endCamera, .flat)
     }
 
-    func testFoldsAreSpreadEvenlyAndTheLastFinishesAtTheGoal() {
+    func testEachMinuteFoldsOneCraneWithTimeLeftToAdmireIt() {
         let crane = crane
 
-        XCTAssertEqual(crane.interval, 100, accuracy: 0.0001)
-        XCTAssertEqual(crane.duration, PaperCrane.longestFold)
-        XCTAssertEqual(crane.start(0), 100 - PaperCrane.longestFold, accuracy: 0.0001)
-        XCTAssertEqual(crane.start(PaperCrane.foldCount - 1) + crane.duration, 1_500, accuracy: 0.0001)
-        XCTAssertEqual(PaperCrane(key: PaperCrane.Key(size: size, top: 230, goalSeconds: 60)).duration, 2.4, accuracy: 0.0001)
+        XCTAssertEqual(crane.length, 60)
+        XCTAssertEqual(crane.span, 50, accuracy: 0.0001)
+        XCTAssertEqual(crane.interval, 49.0 / 17, accuracy: 0.0001)
+        XCTAssertEqual(crane.duration, 49.0 / 17 * 0.72, accuracy: 0.0001)
+        XCTAssertEqual(crane.start(0) + crane.duration, 1 + crane.interval, accuracy: 0.0001)
+        XCTAssertEqual(crane.start(PaperCrane.foldCount - 1) + crane.duration, 50, accuracy: 0.0001)
+        let short = PaperCrane(key: PaperCrane.Key(size: size, top: 230, goalSeconds: 30))
+        XCTAssertEqual(short.length, 30)
+        XCTAssertEqual(short.span, 25, accuracy: 0.0001)
+        XCTAssertEqual(PaperCrane.segments(goalSeconds: 1_500), 25)
+        XCTAssertEqual(PaperCrane.segments(goalSeconds: 90), 1)
+        XCTAssertEqual(PaperCrane.segments(goalSeconds: 30), 1)
+        XCTAssertEqual(PaperCrane.segments(goalSeconds: 0), 0)
+    }
+
+    func testCranesCountAsEachOneIsFinishedButNeverDuringRest() {
+        XCTAssertEqual(PaperCrane.cranes(elapsed: 0, goalSeconds: 1_500), 0)
+        XCTAssertEqual(PaperCrane.cranes(elapsed: 49.9, goalSeconds: 1_500), 0)
+        XCTAssertEqual(PaperCrane.cranes(elapsed: 50, goalSeconds: 1_500), 1)
+        XCTAssertEqual(PaperCrane.cranes(elapsed: 109.9, goalSeconds: 1_500), 1)
+        XCTAssertEqual(PaperCrane.cranes(elapsed: 110, goalSeconds: 1_500), 2)
+        XCTAssertEqual(PaperCrane.cranes(elapsed: 1_500, goalSeconds: 1_500), 25)
+        XCTAssertEqual(PaperCrane.cranes(elapsed: 1_790, goalSeconds: 1_500), 25)
+        XCTAssertEqual(PaperCrane.cranes(elapsed: 50, goalSeconds: 1_500, cycle: 2), 51)
+        XCTAssertEqual(PaperCrane.cranes(elapsed: 25, goalSeconds: 30), 1)
+        XCTAssertEqual(PaperCrane.cranes(elapsed: 100, goalSeconds: 90), 1)
+        XCTAssertEqual(PaperCrane.cranes(elapsed: .nan, goalSeconds: 1_500), 0)
+        XCTAssertEqual(PaperCrane.cranes(elapsed: 500, goalSeconds: 0), 0)
     }
 
     func testFitsFrameEachStageAndCapTheZoom() {
         let crane = crane
 
         XCTAssertEqual(crane.fits.count, PaperCrane.foldCount + 1)
-        XCTAssertEqual(crane.fits[0].scale, 312 / (2 * PaperCraneWorkshop.r), accuracy: 0.001)
+        XCTAssertEqual(crane.fits[0].scale, 312 / 2, accuracy: 0.001)
         XCTAssertTrue(crane.fits.allSatisfy { $0.scale <= crane.fits[0].scale * 1.3 + 0.0001 })
         XCTAssertTrue(crane.fits.allSatisfy { $0.center == CGPoint(x: crane.layout.frame.midX, y: crane.layout.frame.midY) })
         let halfway = crane.fits[0].mix(crane.fits[1], 0.5)
@@ -93,9 +211,10 @@ final class PaperCraneTests: XCTestCase {
     func testReadySheetShowsTheFirstInstruction() {
         let scene = crane.scene(elapsed: 0, restSeconds: 300, settled: false)
 
-        XCTAssertEqual(scene.polygons.count, 2)
-        XCTAssertTrue(scene.polygons.allSatisfy { $0.face == .white && $0.shadow.isEmpty })
-        XCTAssertTrue(scene.polygons.allSatisfy { abs($0.shade - 1) < 0.0001 })
+        XCTAssertEqual(scene.polygons.count, 1)
+        XCTAssertEqual(scene.polygons[0].face, .white)
+        XCTAssertTrue(scene.polygons[0].shadow.isEmpty)
+        XCTAssertEqual(scene.polygons[0].shade, 1, accuracy: 0.0001)
         XCTAssertEqual(scene.folded, 0)
         XCTAssertFalse(scene.finished)
         XCTAssertEqual(scene.standing, 0)
@@ -118,10 +237,18 @@ final class PaperCraneTests: XCTestCase {
         XCTAssertEqual(lifting.folded, 0)
         XCTAssertTrue(lifting.polygons.contains { !$0.shadow.isEmpty && $0.lift > 0 })
 
-        let folded = crane.scene(elapsed: start + crane.duration + 1, restSeconds: 300, settled: false)
+        let folded = crane.scene(elapsed: start + crane.duration + 0.3, restSeconds: 300, settled: false)
         XCTAssertEqual(folded.folded, 1)
-        XCTAssertEqual(folded.polygons.last?.face, .color)
+        XCTAssertEqual(folded.polygons.count, 2)
         XCTAssertTrue(folded.polygons.allSatisfy(\.shadow.isEmpty))
+    }
+
+    func testSquashFoldOpensThePocketToShowTheInside() {
+        let crane = crane
+        let squashing = crane.scene(elapsed: crane.start(2) + crane.duration * 0.55, restSeconds: 300, settled: false)
+
+        XCTAssertTrue(squashing.polygons.contains { $0.face == .white })
+        XCTAssertTrue(squashing.polygons.contains { !$0.shadow.isEmpty })
     }
 
     func testReducedMotionJumpsStraightToEachFold() {
@@ -136,20 +263,22 @@ final class PaperCraneTests: XCTestCase {
         let crane = crane
         let start = crane.start(3)
 
-        XCTAssertNil(crane.scene(elapsed: start - 30, restSeconds: 300, settled: false).hint)
-        XCTAssertEqual(crane.scene(elapsed: start - 1, restSeconds: 300, settled: false).hint?.opacity, 1)
-        XCTAssertNotNil(crane.scene(elapsed: start - 1, restSeconds: 300, settled: false).hint?.turnOver)
+        XCTAssertNil(crane.scene(elapsed: start - 1.8, restSeconds: 300, settled: false).hint)
+        XCTAssertEqual(crane.scene(elapsed: start - 0.1, restSeconds: 300, settled: false).hint?.opacity, 1)
+        XCTAssertNotNil(crane.scene(elapsed: start - 0.1, restSeconds: 300, settled: false).hint?.turnOver)
         let fading = crane.scene(elapsed: start + crane.duration * 0.2, restSeconds: 300, settled: false).hint?.opacity ?? 0
         XCTAssertGreaterThan(fading, 0)
         XCTAssertLessThan(fading, 1)
         XCTAssertNil(crane.scene(elapsed: start + crane.duration * 0.5, restSeconds: 300, settled: false).hint)
         XCTAssertNil(crane.scene(elapsed: start + 0.1, restSeconds: 300, settled: true).hint)
+        XCTAssertEqual(crane.scene(elapsed: crane.start(5) - 0.1, restSeconds: 300, settled: false).hint?.creases.count, 2)
+        XCTAssertEqual(crane.scene(elapsed: 60.1, restSeconds: 300, settled: false).hint?.creases.count, 1)
     }
 
     func testFinishedCraneHoversOverItsShadow() {
         let crane = crane
-        let landing = crane.scene(elapsed: 1_500, restSeconds: 300, settled: false)
-        let later = crane.scene(elapsed: 1_502, restSeconds: 300, settled: false)
+        let landing = crane.scene(elapsed: 50, restSeconds: 300, settled: false)
+        let later = crane.scene(elapsed: 52, restSeconds: 300, settled: false)
 
         XCTAssertTrue(landing.finished)
         XCTAssertEqual(landing.folded, PaperCrane.foldCount)
@@ -158,12 +287,27 @@ final class PaperCraneTests: XCTestCase {
         XCTAssertGreaterThan(landing.ground.width, 0)
         XCTAssertGreaterThan(landing.ground.minY, landing.polygons.flatMap(\.points).map(\.y).max() ?? 0)
         XCTAssertNotEqual(landing.polygons, later.polygons)
-        XCTAssertEqual(crane.scene(elapsed: 1_502, restSeconds: 300, settled: true).polygons, landing.polygons)
-        XCTAssertEqual(crane.scene(elapsed: 1_500, restSeconds: 0, settled: false).folded, PaperCrane.foldCount)
+        XCTAssertEqual(crane.scene(elapsed: 52, restSeconds: 300, settled: true).polygons, landing.polygons)
+        XCTAssertFalse(crane.scene(elapsed: 49.9, restSeconds: 300, settled: false).finished)
+        XCTAssertTrue(crane.scene(elapsed: 1_600, restSeconds: 300, settled: false).finished)
+        XCTAssertEqual(crane.scene(elapsed: 1_500, restSeconds: 300, settled: false).polygons, crane.scene(elapsed: 1_500, restSeconds: 0, settled: false).polygons)
         XCTAssertTrue(PaperCrane(key: PaperCrane.Key(size: size, top: 230, goalSeconds: 0)).scene(elapsed: 0, restSeconds: 0, settled: false).finished)
     }
 
-    func testLoopingCraneFliesAwayAndTheNextSheetFadesIn() {
+    func testEachCraneFliesOffAsTheNextSheetArrives() {
+        let crane = crane
+
+        XCTAssertEqual(crane.scene(elapsed: 55, restSeconds: 300, settled: false).opacity, 1)
+        XCTAssertLessThan(crane.scene(elapsed: 59.99, restSeconds: 300, settled: false).opacity, 0.01)
+        XCTAssertEqual(crane.scene(elapsed: 59.99, restSeconds: 300, settled: true).opacity, 1)
+        XCTAssertEqual(crane.scene(elapsed: 60, restSeconds: 300, settled: false).opacity, 0)
+        XCTAssertFalse(crane.scene(elapsed: 60, restSeconds: 300, settled: false).finished)
+        XCTAssertEqual(crane.scene(elapsed: 60 + PaperCrane.arrival, restSeconds: 300, settled: false).opacity, 1, accuracy: 0.0001)
+        XCTAssertEqual(crane.scene(elapsed: 1_499.99, restSeconds: 300, settled: false).opacity, 1)
+        XCTAssertLessThan(crane.scene(elapsed: 1_499.99, restSeconds: 0, settled: false, looping: true).opacity, 0.01)
+    }
+
+    func testLoopingCraneFliesAwayAfterRestAndTheNextSheetFadesIn() {
         let crane = crane
 
         XCTAssertEqual(crane.scene(elapsed: 1_799.99, restSeconds: 300, settled: false).opacity, 1)
@@ -172,27 +316,15 @@ final class PaperCraneTests: XCTestCase {
         XCTAssertEqual(crane.scene(elapsed: 0, restSeconds: 300, settled: false, arriving: true).opacity, 0)
         XCTAssertEqual(crane.scene(elapsed: PaperCrane.arrival, restSeconds: 300, settled: false, arriving: true).opacity, 1)
         XCTAssertEqual(crane.scene(elapsed: 0, restSeconds: 300, settled: true, arriving: true).opacity, 1)
+        XCTAssertEqual(crane.scene(elapsed: 0, restSeconds: 300, settled: false).opacity, 1)
     }
 
-    func testAnimationOnlyRunsWhilePaperMoves() {
-        let crane = crane
-
-        XCTAssertTrue(crane.moving(at: 0.5))
-        XCTAssertFalse(crane.moving(at: 40))
-        XCTAssertTrue(crane.moving(at: crane.start(2) - 2))
-        XCTAssertTrue(crane.moving(at: crane.start(2) + 1))
-        XCTAssertFalse(crane.moving(at: crane.start(2) + crane.duration + 5))
-        XCTAssertTrue(crane.moving(at: 1_499.5))
-        XCTAssertTrue(crane.moving(at: 1_700))
-    }
-
-    func testCaptionCountsFoldsAndCranes() {
-        XCTAssertEqual(PaperCrane.caption(folded: 0, finished: false, started: false, cranes: 1), "a square of paper")
-        XCTAssertEqual(PaperCrane.caption(folded: 0, finished: false, started: true, cranes: 1), "fold 1 of 15")
-        XCTAssertEqual(PaperCrane.caption(folded: 14, finished: false, started: true, cranes: 1), "fold 15 of 15")
-        XCTAssertEqual(PaperCrane.caption(folded: 15, finished: false, started: true, cranes: 1), "fold 15 of 15")
-        XCTAssertEqual(PaperCrane.caption(folded: 15, finished: true, started: true, cranes: 1), "one of a thousand")
-        XCTAssertEqual(PaperCrane.caption(folded: 15, finished: true, started: true, cranes: 3), "3 of a thousand")
+    func testCaptionFollowsTheFolding() {
+        XCTAssertEqual(PaperCrane.caption(folded: 0, finished: false, started: false), "a square of paper")
+        XCTAssertEqual(PaperCrane.caption(folded: 0, finished: false, started: true), "fold 1 of 17")
+        XCTAssertEqual(PaperCrane.caption(folded: 16, finished: false, started: true), "fold 17 of 17")
+        XCTAssertEqual(PaperCrane.caption(folded: 17, finished: false, started: true), "fold 17 of 17")
+        XCTAssertEqual(PaperCrane.caption(folded: 17, finished: true, started: true), "a paper crane")
     }
 
     func testElapsedFollowsRunningPausedAndLoopingSnapshots() {

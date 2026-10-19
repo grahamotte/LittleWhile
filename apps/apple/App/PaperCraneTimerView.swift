@@ -26,6 +26,7 @@ struct PaperCraneTimerView: View {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var crane: PaperCrane?
+    @State private var ledger = PaperCraneLedger()
 
     let snapshot: TimerSnapshot
 
@@ -41,8 +42,7 @@ struct PaperCraneTimerView: View {
 
                     TimelineView(.animation(
                         minimumInterval: 1.0 / 60,
-                        paused: snapshot.status != .running || scenePhase != .active || reduceMotion
-                            || !crane.moving(at: PaperCrane.elapsed(snapshot: snapshot, at: .now)),
+                        paused: snapshot.status != .running || scenePhase != .active || reduceMotion,
                     )) { context in
                         let elapsed = PaperCrane.elapsed(snapshot: snapshot, at: context.date)
                         let scene = crane.scene(
@@ -56,8 +56,13 @@ struct PaperCraneTimerView: View {
                             folded: scene.folded,
                             finished: scene.finished,
                             started: snapshot.status != .ready,
-                            cranes: snapshot.cycle + 1,
                         )
+                        let cranes = PaperCrane.cranes(
+                            elapsed: elapsed,
+                            goalSeconds: snapshot.goalSeconds,
+                            cycle: snapshot.loops ? snapshot.cycle : 0,
+                        )
+                        let tally = ledger.count(run: snapshot.runID, cranes: cranes)
 
                         ZStack(alignment: .top) {
                             PaperCraneTable(scene: scene)
@@ -79,6 +84,25 @@ struct PaperCraneTimerView: View {
                             .animation(.easeInOut(duration: 0.6), value: caption)
                             .accessibilityElement(children: .ignore)
                             .accessibilityLabel("\(accessibilityStatus). \(snapshot.clockText) remaining. \(caption). \(snapshot.goalSeconds / 60) minute focus. \(snapshot.restSeconds / 60) minute rest.")
+
+                            HStack(spacing: 7) {
+                                PaperCraneGlyph()
+                                    .fill(PaperCranePalette.ink)
+                                    .frame(width: 36, height: 24)
+                                Text(tally, format: .number)
+                                    .font(.system(.title3, design: .serif))
+                                    .monospacedDigit()
+                                    .contentTransition(.numericText())
+                            }
+                            .foregroundStyle(PaperCranePalette.ink)
+                            .animation(.spring(duration: 0.5), value: tally)
+                            .frame(maxHeight: .infinity, alignment: .bottom)
+                            .padding(.bottom, safeGeometry.safeAreaInsets.bottom + 22)
+                            .accessibilityElement(children: .ignore)
+                            .accessibilityLabel("\(tally) paper cranes")
+                        }
+                        .onChange(of: "\(snapshot.runID) \(cranes)", initial: true) {
+                            ledger.credit(run: snapshot.runID, cranes: cranes)
                         }
                     }
                 }
@@ -125,6 +149,42 @@ struct PaperCraneThemePreview: View {
         }
         .environment(\.colorScheme, .light)
         .accessibilityHidden(true)
+    }
+}
+
+struct PaperCraneGlyph: Shape {
+    static let outline: [[CGPoint]] = {
+        let fold = PaperCrane.folds[PaperCrane.foldCount - 1]
+        let facets = fold.end.map { facet in
+            var facet = facet
+            facet.points = facet.points.map(fold.endCamera.apply)
+            return facet
+        }
+        let points = facets.flatMap(\.points)
+        let minX = points.map(\.x).min() ?? 0
+        let maxX = points.map(\.x).max() ?? 1
+        let minY = points.map(\.y).min() ?? 0
+        let maxY = points.map(\.y).max() ?? 1
+        let side = max(0.000_1, max(maxX - minX, maxY - minY))
+        return facets.map { facet in
+            let polygon = facet.points.map { CGPoint(x: ($0.x - minX) / side, y: ($0.y - minY) / side) }
+            let area = zip(polygon, polygon.dropFirst() + polygon.prefix(1)).reduce(CGFloat(0)) { $0 + $1.0.x * $1.1.y - $1.1.x * $1.0.y }
+            return area >= 0 ? polygon : polygon.reversed()
+        }
+    }()
+
+    func path(in rect: CGRect) -> Path {
+        let points = Self.outline.flatMap { $0 }
+        let width = points.map(\.x).max() ?? 1
+        let height = points.map(\.y).max() ?? 1
+        let scale = min(rect.width / max(0.000_1, width), rect.height / max(0.000_1, height))
+        let origin = CGPoint(x: rect.midX - width * scale / 2, y: rect.midY - height * scale / 2)
+        var path = Path()
+        for polygon in Self.outline {
+            path.addLines(polygon.map { CGPoint(x: origin.x + $0.x * scale, y: origin.y + $0.y * scale) })
+            path.closeSubpath()
+        }
+        return path
     }
 }
 
@@ -268,20 +328,28 @@ struct PaperCraneTable: View {
         ))
 
         var seams = Path()
+        var creases = Path()
         var edges = Path()
         for index in polygon.points.indices {
             let start = polygon.points[index]
             let end = polygon.points[(index + 1) % polygon.points.count]
-            if index < polygon.strokes.count, polygon.strokes[index] {
+            switch polygon.edges[safe: index] ?? .edge {
+            case .edge:
                 edges.move(to: start)
                 edges.addLine(to: end)
-            } else {
+            case .crease:
+                seams.move(to: start)
+                seams.addLine(to: end)
+                creases.move(to: start)
+                creases.addLine(to: end)
+            case .hidden:
                 seams.move(to: start)
                 seams.addLine(to: end)
             }
         }
         context.stroke(seams, with: .color(PaperCranePalette.paint(tone)), lineWidth: 0.7)
         let edge = polygon.face == .white ? PaperCranePalette.whiteEdge : PaperCranePalette.colorEdge
+        context.stroke(creases, with: .color(edge.opacity(0.22)), style: StrokeStyle(lineWidth: 0.6, lineCap: .round))
         context.stroke(edges, with: .color(edge.opacity(0.55)), style: StrokeStyle(lineWidth: 0.7, lineCap: .round, lineJoin: .round))
     }
 

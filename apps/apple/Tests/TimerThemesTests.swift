@@ -10,7 +10,7 @@ final class TimerThemesTests: XCTestCase {
         XCTAssertEqual(TimerThemes.resolve("mr-smiles").colorScheme, .dark)
         XCTAssertEqual(TimerThemes.resolve("he-loves-me").name, "He Loves Me")
         XCTAssertEqual(TimerThemes.resolve("he-loves-me").colorScheme, .light)
-        XCTAssertEqual(TimerThemes.resolve("paper-crane").name, "Paper Crane")
+        XCTAssertEqual(TimerThemes.resolve("paper-crane").name, "千羽鶴")
         XCTAssertEqual(TimerThemes.resolve("paper-crane").colorScheme, .light)
     }
 

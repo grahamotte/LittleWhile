@@ -4,7 +4,7 @@ import simd
 
 struct PaperCranePolygon: Equatable {
     let points: [CGPoint]
-    let strokes: [Bool]
+    let edges: [PaperCraneEdge]
     let face: PaperCraneFace
     let shade: Double
     let shadow: [CGPoint]
@@ -71,7 +71,7 @@ struct PaperCrane {
     static let pivot = SIMD3<Double>(0, 0.3, 0)
     static let perspective = 6.0
     static let light = simd_normalize(SIMD3<Double>(-0.45, -0.75, 1))
-    static let longestFold: TimeInterval = 2.6
+    static let longestFold: TimeInterval = 2.4
     static let departure: TimeInterval = 2.4
     static let arrival: TimeInterval = 0.9
 
@@ -108,28 +108,47 @@ struct PaperCrane {
         folds.count
     }
 
+    static let minute: TimeInterval = 60
+    static let folding = 5.0 / 6
+    static let opening = 1.0 / 60
+
+    static func segments(goalSeconds: Int) -> Int {
+        goalSeconds <= 0 ? 0 : max(1, goalSeconds / Int(minute))
+    }
+
+    static func cranes(elapsed: TimeInterval, goalSeconds: Int, cycle: Int = 0) -> Int {
+        let count = segments(goalSeconds: goalSeconds)
+        guard count > 0 else { return 0 }
+        let goal = TimeInterval(goalSeconds)
+        let length = min(minute, goal)
+        let focus = min(goal, max(0, elapsed.isFinite ? elapsed : 0))
+        let reached = Int(((focus - length * folding) / length).rounded(.down)) + 1
+        return max(0, cycle) * count + min(count, max(0, reached))
+    }
+
+    var length: TimeInterval {
+        min(Self.minute, TimeInterval(max(0, key.goalSeconds)))
+    }
+
+    var span: TimeInterval {
+        length * Self.folding
+    }
+
     var interval: TimeInterval {
-        TimeInterval(max(0, key.goalSeconds)) / TimeInterval(Self.foldCount)
+        (span - length * Self.opening) / TimeInterval(Self.foldCount)
     }
 
     var duration: TimeInterval {
-        min(Self.longestFold, interval * 0.6)
+        min(Self.longestFold, interval * 0.72)
     }
 
     func start(_ index: Int) -> TimeInterval {
-        interval * TimeInterval(index + 1) - duration
+        length * Self.opening + interval * TimeInterval(index + 1) - duration
     }
 
-    func moving(at elapsed: TimeInterval) -> Bool {
-        let goal = TimeInterval(max(0, key.goalSeconds))
-        guard elapsed < goal - 1, elapsed > Self.arrival + 0.5 else { return true }
-        let lead = min(interval * 0.45, 8)
-        return (0..<Self.foldCount).contains { elapsed > start($0) - lead - 1.5 && elapsed < start($0) + duration + 1 }
-    }
-
-    static func caption(folded: Int, finished: Bool, started: Bool, cranes: Int) -> String {
+    static func caption(folded: Int, finished: Bool, started: Bool) -> String {
         if finished {
-            return cranes <= 1 ? "one of a thousand" : "\(cranes) of a thousand"
+            return "a paper crane"
         }
         if !started {
             return "a square of paper"
@@ -157,14 +176,31 @@ struct PaperCrane {
         let goal = TimeInterval(max(0, key.goalSeconds))
         let rest = TimeInterval(max(0, restSeconds))
         let elapsed = min(goal + rest, max(0, rawElapsed.isFinite ? rawElapsed : 0))
-        let count = Self.foldCount
+        let count = Self.segments(goalSeconds: key.goalSeconds)
+        guard count > 0 else { return hover(time: 0, away: 0, settled: settled) }
 
-        if goal <= 0 || elapsed >= goal {
-            return finishedScene(restElapsed: elapsed - goal, rest: rest, settled: settled, looping: looping)
+        if elapsed >= goal {
+            var away = 0.0
+            if looping && !settled && rest > 0 {
+                away = PaperCraneGeometry.ease((elapsed - (goal + rest - Self.departure)) / Self.departure)
+            }
+            return hover(time: elapsed - TimeInterval(count - 1) * length - span, away: away, settled: settled)
         }
 
+        let segment = min(count - 1, Int(elapsed / length))
+        let within = elapsed - TimeInterval(segment) * length
+        if within >= span {
+            let flies = !settled && (segment < count - 1 || (looping && rest <= 0))
+            let away = flies ? PaperCraneGeometry.ease((within - (length - Self.departure)) / Self.departure) : 0
+            return hover(time: within - span, away: away, settled: settled)
+        }
+        return folding(within, settled: settled, arriving: !settled && (segment > 0 || arriving))
+    }
+
+    private func folding(_ elapsed: TimeInterval, settled: Bool, arriving: Bool) -> PaperCraneScene {
+        let count = Self.foldCount
         let current = (0..<count).last { start($0) <= elapsed }
-        var facets = Self.sheet.map { Posed(facet: $0, points: $0.points, layer: $0.layer, tucked: false, swinging: false) }
+        var facets = Self.sheet.map { Posed(facet: $0, points: $0.points, layer: $0.layer, tucked: false, stack: .identity) }
         var camera = PaperCraneCamera.flat
         var fit = fits[0]
         var folded = 0
@@ -172,19 +208,22 @@ struct PaperCrane {
             let fold = Self.folds[current]
             let progress = settled ? 1 : min(1, (elapsed - start(current)) / max(0.001, duration))
             let eased = PaperCraneGeometry.ease(progress)
-            facets = fold.pieces.map { piece in
-                var swinging = false
-                if case .swing = piece.move {
-                    swinging = progress < 1
+            if progress >= 1 {
+                facets = fold.end.indices.map { index in
+                    let facet = fold.end[index]
+                    return Posed(facet: facet, points: facet.points, layer: facet.layer, tucked: false, stack: Self.stack(fold, index, at: 1))
                 }
-                let facet = progress >= 1 ? piece.end : piece.facet
-                return Posed(
-                    facet: facet,
-                    points: piece.points(at: progress),
-                    layer: piece.layer(at: progress),
-                    tucked: piece.tucked && progress < 1,
-                    swinging: swinging,
-                )
+            } else {
+                facets = fold.pieces.indices.map { index in
+                    let piece = fold.pieces[index]
+                    return Posed(
+                        facet: piece.facet,
+                        points: fold.points(index, at: progress),
+                        layer: piece.tucked ? piece.endLayer : fold.layer(index, at: progress),
+                        tucked: piece.tucked,
+                        stack: Self.stack(fold, index, at: progress),
+                    )
+                }
             }
             camera = fold.startCamera.mix(fold.endCamera, eased)
             fit = fits[current].mix(fits[current + 1], eased)
@@ -193,7 +232,6 @@ struct PaperCrane {
 
         let standing = min(1, abs(camera.pitch) / max(0.001, abs(Self.folds[count - 1].endCamera.pitch)))
         let polygons = render(facets, camera: camera, fit: fit, standing: standing, offset: .zero)
-        let opacity = arriving && !settled ? PaperCraneGeometry.ease(elapsed / Self.arrival) : 1
         return PaperCraneScene(
             polygons: polygons,
             hint: hint(elapsed: elapsed, settled: settled),
@@ -201,29 +239,18 @@ struct PaperCrane {
             finished: false,
             standing: standing,
             ground: ground(polygons, standing: standing),
-            opacity: opacity,
+            opacity: arriving ? PaperCraneGeometry.ease(elapsed / Self.arrival) : 1,
         )
     }
 
-    private func finishedScene(restElapsed: TimeInterval, rest: TimeInterval, settled: Bool, looping: Bool) -> PaperCraneScene {
+    private func hover(time rawTime: TimeInterval, away: Double, settled: Bool) -> PaperCraneScene {
         let fold = Self.folds[Self.foldCount - 1]
-        let time = settled ? 0 : restElapsed
-        let flap = 0.11 * sin(time * 1.7) * min(1, time / 1.5)
-        let lift = settled ? 0 : CGFloat(sin(time * 1.1)) * 0.022 * CGFloat(min(1, time / 1.5))
-        let camera = PaperCraneCamera(yaw: fold.endCamera.yaw + 0.16 * sin(time * 0.37), pitch: fold.endCamera.pitch)
-        let wing = SIMD3<Double>(-1, 0, 0)
-        let hinge = SIMD3<Double>(0, PaperCraneWorkshop.k, 0)
-        var away = 0.0
-        if looping && !settled && rest > 0 {
-            away = PaperCraneGeometry.ease((restElapsed - (rest - Self.departure)) / Self.departure)
-        }
-        let facets = fold.end.map { facet in
-            var points = facet.points
-            if facet.group == "w1" || facet.group == "w2" {
-                let sign: Double = facet.group == "w1" ? 1 : -1
-                points = points.map { PaperCraneGeometry.rotate($0, origin: hinge, axis: wing, angle: flap * sign * (1 + away * 3)) }
-            }
-            return Posed(facet: facet, points: points, layer: facet.layer, tucked: false, swinging: false)
+        let time = settled ? 0 : max(0, rawTime)
+        let lift = CGFloat(sin(time * 1.1)) * 0.022 * CGFloat(min(1, time / 1.5))
+        let camera = PaperCraneCamera(yaw: fold.endCamera.yaw + 0.12 * sin(time * 0.37), pitch: fold.endCamera.pitch)
+        let facets = fold.end.indices.map { index in
+            let facet = fold.end[index]
+            return Posed(facet: facet, points: facet.points, layer: facet.layer, tucked: false, stack: Self.stack(fold, index, at: 1))
         }
         let base = fits[fits.count - 1]
         let offset = CGPoint(
@@ -247,7 +274,12 @@ struct PaperCrane {
         let points: [SIMD3<Double>]
         let layer: Double
         let tucked: Bool
-        let swinging: Bool
+        let stack: PaperCranePose
+    }
+
+    private static func stack(_ fold: PaperCraneFold, _ index: Int, at progress: Double) -> PaperCranePose {
+        let piece = fold.pieces[index]
+        return piece.endLayer == piece.facet.layer ? fold.pose(index, at: progress) : .identity
     }
 
     private static func view(_ point: SIMD3<Double>, camera: PaperCraneCamera) -> SIMD3<Double> {
@@ -269,21 +301,18 @@ struct PaperCrane {
         }
 
         let drop = pow(1 - standing, 4)
-        let sorted = facets.map { posed -> (Posed, Double) in
-            let depth = posed.points.map { Self.view($0, camera: camera).z }.reduce(0, +) / Double(max(1, posed.points.count))
-            return (posed, posed.tucked ? posed.layer * 0.001 : depth + posed.layer * 0.001)
+        let views = facets.map { $0.points.map { Self.view($0, camera: camera) } }
+        let stacks = facets.map { posed -> Double in
+            let thickness = camera.apply(posed.stack.rotation.act(SIMD3(0, 0, 1))).z
+            return posed.layer * 0.001 * (posed.tucked ? 1 : thickness)
         }
-        .sorted { $0.1 < $1.1 }
+        let order = Self.order(views, stacks: stacks, fixed: facets.map(\.tucked))
 
-        return sorted.map { posed, _ in
+        return order.map { facets[$0] }.map { posed in
             let viewed = posed.points.map { Self.view($0, camera: camera) }
             var normal = PaperCraneGeometry.newell(viewed)
             let length = simd_length(normal)
             normal = length > 0.000_001 ? normal / length : SIMD3(0, 0, 1)
-            if posed.swinging {
-                normal = SIMD3(0, 0, normal.z >= 0 ? 1 : -1)
-            }
-            let face = normal.z >= 0 ? posed.facet.front : posed.facet.back
             let facing = normal.z >= 0 ? normal : -normal
             let shade = (0.56 + 0.44 * max(0, simd_dot(facing, Self.light))) / (0.56 + 0.44 * Self.light.z)
             let lift = drop * max(0, viewed.map(\.z).max() ?? 0)
@@ -297,13 +326,100 @@ struct PaperCrane {
                 : []
             return PaperCranePolygon(
                 points: posed.points.map { screen(Self.project($0, camera: camera)) },
-                strokes: posed.facet.strokes,
-                face: face,
+                edges: posed.facet.edges,
+                face: posed.facet.face(of: viewed),
                 shade: shade,
                 shadow: shadow,
                 lift: CGFloat(lift) * fit.scale,
             )
         }
+    }
+
+    static func order(_ polygons: [[SIMD3<Double>]], stacks: [Double], fixed: [Bool]) -> [Int] {
+        let count = polygons.count
+        let planes = polygons.map(plane)
+        let flat = polygons.map { $0.map { SIMD2($0.x, $0.y) } }
+        let depths = polygons.map { $0.reduce(SIMD3<Double>.zero, +).z / Double(max(1, $0.count)) }
+        let keys = depths.indices.map { fixed[$0] ? stacks[$0] : depths[$0] + stacks[$0] }
+        let boxes = flat.map { points in
+            (points.reduce(SIMD2(Double.infinity, .infinity)) { simd_min($0, $1) }, points.reduce(SIMD2(-Double.infinity, -.infinity)) { simd_max($0, $1) })
+        }
+        func inside(_ point: SIMD2<Double>, _ polygon: [SIMD2<Double>]) -> Bool {
+            PaperCraneGeometry.contains(point, polygon.map { SIMD3($0.x, $0.y, 0) })
+        }
+        func depth(_ index: Int, at point: SIMD2<Double>) -> Double? {
+            let (normal, offset) = planes[index]
+            guard abs(normal.z) > 0.05 else { return nil }
+            return (offset - normal.x * point.x - normal.y * point.y) / normal.z
+        }
+        var after = Array(repeating: [Int](), count: count)
+        var blockers = Array(repeating: 0, count: count)
+        for first in 0..<count {
+            for second in (first + 1)..<count {
+                let lower = simd_max(boxes[first].0, boxes[second].0)
+                let upper = simd_min(boxes[first].1, boxes[second].1)
+                guard lower.x < upper.x, lower.y < upper.y else { continue }
+                let coplanar = simd_dot(planes[first].0, planes[second].0) > 0.995 && abs(planes[first].1 - planes[second].1) < 0.02
+                if coplanar, !fixed[first], !fixed[second], stacks[first] != stacks[second] {
+                    let (back, front) = stacks[first] < stacks[second] ? (first, second) : (second, first)
+                    after[back].append(front)
+                    blockers[front] += 1
+                    continue
+                }
+                if fixed[first] || fixed[second] {
+                    let (back, front) = keys[first] < keys[second] ? (first, second) : (second, first)
+                    after[back].append(front)
+                    blockers[front] += 1
+                    continue
+                }
+                var differences: [Double] = []
+                for row in 0..<6 {
+                    for column in 0..<6 {
+                        let point = lower + (upper - lower) * SIMD2((Double(column) + 0.5) / 6, (Double(row) + 0.5) / 6)
+                        guard inside(point, flat[first]), inside(point, flat[second]),
+                              let near = depth(first, at: point), let far = depth(second, at: point) else { continue }
+                        differences.append(near - far)
+                    }
+                }
+                guard let low = differences.min(), let high = differences.max() else { continue }
+                let firstBehind: Bool
+                if high < -0.003 {
+                    firstBehind = true
+                } else if low > 0.003 {
+                    firstBehind = false
+                } else {
+                    continue
+                }
+                let (back, front) = firstBehind ? (first, second) : (second, first)
+                after[back].append(front)
+                blockers[front] += 1
+            }
+        }
+        var remaining = Set(0..<count)
+        var result: [Int] = []
+        while !remaining.isEmpty {
+            let ready = remaining.filter { blockers[$0] == 0 }
+            let next = ready.isEmpty
+                ? remaining.min { (blockers[$0], keys[$0]) < (blockers[$1], keys[$1]) } ?? 0
+                : ready.min { keys[$0] < keys[$1] } ?? 0
+            remaining.remove(next)
+            result.append(next)
+            for front in after[next] where remaining.contains(front) {
+                blockers[front] -= 1
+            }
+        }
+        return result
+    }
+
+    private static func plane(_ points: [SIMD3<Double>]) -> (SIMD3<Double>, Double) {
+        let center = points.reduce(SIMD3<Double>.zero, +) / Double(max(1, points.count))
+        var normal = PaperCraneGeometry.newell(points)
+        let length = simd_length(normal)
+        normal = length > 0.000_001 ? normal / length : SIMD3(0, 0, 1)
+        if normal.z < 0 || (normal.z == 0 && normal.y < 0) {
+            normal = -normal
+        }
+        return (normal, simd_dot(normal, center))
     }
 
     private func ground(_ polygons: [PaperCranePolygon], standing: Double) -> CGRect {
@@ -367,233 +483,380 @@ struct PaperCrane {
 extension PaperCraneWorkshop {
     static let r = 1 / 2.0.squareRoot()
     static let k = 1 - r
+    static let origin = SIMD3<Double>(0, 0, 0)
+    static let bottom = SIMD3<Double>(0, 1, 0)
+    static let kiteLeft = SIMD3(-k, k, 0)
+    static let kiteRight = SIMD3(k, k, 0)
+    static let pocket = 0.95
+    static let lean = 0.24
+    static let drop = Double.pi / 2 + lean + 0.06
 
     static func sheet() -> [PaperCraneFacet] {
-        let northWest = SIMD3(-r, -r, 0)
-        let northEast = SIMD3(r, -r, 0)
-        let southEast = SIMD3(r, r, 0)
-        let southWest = SIMD3(-r, r, 0)
-        return [
-            facet("a", [northWest, northEast, southEast], strokes: [true, true, false]),
-            facet("b", [northWest, southEast, southWest], strokes: [false, true, true]),
-        ]
-    }
-
-    static func facet(_ group: String, _ points: [SIMD3<Double>], strokes: [Bool]) -> PaperCraneFacet {
-        let up = PaperCraneGeometry.newell(points).z >= 0
-        return PaperCraneFacet(group: group, points: points, strokes: strokes, layer: 0, front: up ? .white : .color, back: up ? .color : .white)
+        let corners = [SIMD2<Double>(0, -1), SIMD2(1, 0), SIMD2(0, 1), SIMD2(-1, 0)]
+        let sheet = PaperCraneFacet(
+            group: "sheet",
+            paper: corners,
+            points: corners.map { SIMD3($0.x, $0.y, 0) },
+            layer: 0,
+            edges: Array(repeating: .edge, count: 4),
+        )
+        return styled([sheet], seams: [])
     }
 
     static func crane() -> [PaperCraneFold] {
-        let origin = SIMD3<Double>(0, 0, 0)
-        let northWest = SIMD3(-r, -r, 0)
-        let southEast = SIMD3(r, r, 0)
-        let southWest = SIMD3(-r, r, 0)
-        let left = SIMD3(-0.5, 0.5, 0)
-        let right = SIMD3(0.5, 0.5, 0)
-        let bottom = SIMD3<Double>(0, 1, 0)
-        let kiteLeft = SIMD3(-k, k, 0)
-        let kiteRight = SIMD3(k, k, 0)
-        let center = SIMD3(0, k, 0)
+        let east = SIMD3<Double>(1, 0, 0)
+        let west = SIMD3<Double>(-1, 0, 0)
         let narrow = tan(.pi / 16) * (1 - k)
-        let narrowLeft = SIMD3(-narrow, k, 0)
-        let narrowRight = SIMD3(narrow, k, 0)
-
-        func group(_ names: String...) -> (PaperCraneFacet) -> Bool {
-            { names.contains($0.group) }
-        }
-        func side(_ a: SIMD3<Double>, _ b: SIMD3<Double>, _ reference: SIMD3<Double>) -> (PaperCraneFacet) -> Bool {
-            let sign = PaperCraneGeometry.side(reference, a, b)
-            return { PaperCraneGeometry.side($0.centroid, a, b) * sign > 0 }
-        }
-
-        let squash: (SIMD3<Double>) -> SIMD3<Double> = { point in
-            let middle = SIMD3(0, r, 0)
-            if point.x <= 0.000_001 {
-                return affine(point, from: (origin, southWest, middle), to: (origin, left, bottom))
-            }
-            return affine(point, from: (origin, middle, southEast), to: (origin, bottom, right))
-        }
-        let bloom: (SIMD3<Double>, SIMD3<Double>) -> SIMD3<Double> = { start, end in
-            let middle = (start + end) / 2
-            return SIMD3(middle.x * 0.45, middle.y + 0.04, 0.55 * simd_length(end - start) + 0.3 * abs(start.x))
-        }
 
         var workshop = PaperCraneWorkshop(facets: sheet())
 
-        workshop.perform([Action(select: group("a"), kind: .fold(northWest, southEast, mountain: false, angle: .pi, layering: .top))])
+        let top = workshop.component(at: SIMD2(0, -0.5), line: west, east)
+        workshop.perform([Motion(facets: top, samples: workshop.fold(top, west, east), layering: .over, crease: (west, east))])
 
-        workshop.cut(origin, southWest) { _ in true }
-        workshop.regroup("a1") { $0.group == "a" && side(origin, southWest, northWest)($0) }
-        workshop.regroup("b1") { $0.group == "b" && side(origin, southWest, northWest)($0) }
-        workshop.regroup("a2", where: group("a"))
-        workshop.regroup("b2", where: group("b"))
-        workshop.perform([Action(select: group("a1", "b1"), kind: .fold(origin, southWest, mountain: false, angle: .pi, layering: .top))])
+        let half = workshop.component(at: SIMD2(-0.5, 0.25), line: origin, bottom)
+        workshop.perform([Motion(facets: half, samples: workshop.fold(half, origin, bottom), layering: .over, crease: (origin, bottom))])
 
-        workshop.cut(origin, bottom, crease: true, where: group("a1", "b1"))
-        workshop.paint(.color, where: group("a1"))
-        workshop.perform([Action(select: group("a1", "b1"), kind: .morph(to: squash, via: bloom))])
+        workshop.squash(at: SIMD2(0.6, 0.2), spine: east)
+        workshop.turnOver()
+        workshop.squash(at: SIMD2(-0.6, 0.2), spine: west)
 
-        workshop.perform([Action(select: { _ in true }, kind: .turnOver)])
+        workshop.kites()
+        workshop.petal()
+        workshop.turnOver()
+        workshop.kites()
+        workshop.petal()
 
-        workshop.cut(origin, bottom, crease: true, where: group("a2", "b2"))
-        workshop.paint(.color, where: group("a2"))
-        workshop.perform([Action(select: group("a2", "b2"), kind: .morph(to: squash, via: bloom))])
-
-        for (front, kite, wing) in [("b2", "b2k", "w2"), ("b1", "b1k", "w1")] {
-            workshop.cut(kiteLeft, bottom, where: group(front))
-            workshop.cut(kiteRight, bottom, where: group(front))
-            workshop.perform([
-                Action(
-                    select: { $0.group == front && side(kiteLeft, bottom, left)($0) },
-                    kind: .fold(kiteLeft, bottom, mountain: false, angle: .pi, layering: .top),
-                    window: 0...0.62,
-                    regroup: kite,
-                ),
-                Action(
-                    select: { $0.group == front && side(kiteRight, bottom, right)($0) },
-                    kind: .fold(kiteRight, bottom, mountain: false, angle: .pi, layering: .top),
-                    window: 0.38...1,
-                    regroup: kite,
-                ),
-            ])
-
-            workshop.cut(kiteLeft, kiteRight, where: group(front))
-            workshop.paint(.color, where: group(front))
-            var actions = [
-                Action(
-                    select: { ($0.group == front && $0.centroid.y > k) || $0.group == kite },
-                    kind: .fold(kiteLeft, kiteRight, mountain: false, angle: .pi, layering: .top),
-                    regroup: wing,
-                ),
-            ]
-            if front == "b1" {
-                workshop.cut(kiteLeft, bottom, where: group("a1", "a2"))
-                workshop.cut(kiteRight, bottom, where: group("a1", "a2"))
-                actions += [
-                    Action(
-                        select: { ["a1", "a2"].contains($0.group) && side(kiteLeft, bottom, left)($0) },
-                        kind: .fold(kiteLeft, bottom, mountain: true, angle: .pi, layering: .bottom),
-                        window: 0...0.7,
-                        arrow: false,
-                    ),
-                    Action(
-                        select: { ["a1", "a2"].contains($0.group) && side(kiteRight, bottom, right)($0) },
-                        kind: .fold(kiteRight, bottom, mountain: true, angle: .pi, layering: .bottom),
-                        window: 0.1...0.8,
-                        arrow: false,
-                    ),
-                ]
-            }
-            workshop.perform(actions)
-            workshop.paint(.color, where: group(wing))
-
-            if front == "b2" {
-                workshop.perform([Action(select: { _ in true }, kind: .turnOver)])
-            }
-        }
-
-        workshop.cut(kiteLeft, kiteRight, where: group("a1", "a2"))
-        let legs: (PaperCraneFacet) -> Bool = { ["a1", "a2"].contains($0.group) && $0.centroid.y > k }
-        workshop.cut(bottom, narrowLeft, where: legs)
-        workshop.cut(bottom, narrowRight, where: legs)
-        let inner = workshop.facets.filter { $0.group == "a1" }.map(\.layer).max() ?? 0
-        let wings = workshop.facets.filter { $0.group == "w1" }.map(\.layer).min() ?? 1
-        let tuck = (inner + wings) / 2
-        workshop.perform([
-            Action(
-                select: { $0.group == "a1" && $0.centroid.y > k && side(bottom, narrowLeft, kiteLeft)($0) },
-                kind: .fold(bottom, narrowLeft, mountain: false, angle: .pi, layering: .value(tuck)),
-                window: 0...0.6,
-            ),
-            Action(
-                select: { $0.group == "a1" && $0.centroid.y > k && side(bottom, narrowRight, kiteRight)($0) },
-                kind: .fold(bottom, narrowRight, mountain: false, angle: .pi, layering: .value(tuck)),
-                window: 0.4...1,
-            ),
-            Action(
-                select: { $0.group == "a2" && $0.centroid.y > k && side(bottom, narrowLeft, kiteLeft)($0) },
-                kind: .fold(bottom, narrowLeft, mountain: true, angle: .pi, layering: .bottom),
-                window: 0...0.6,
-                arrow: false,
-            ),
-            Action(
-                select: { $0.group == "a2" && $0.centroid.y > k && side(bottom, narrowRight, kiteRight)($0) },
-                kind: .fold(bottom, narrowRight, mountain: true, angle: .pi, layering: .bottom),
-                window: 0.4...1,
-                arrow: false,
-            ),
-        ])
+        workshop.narrow(narrow)
+        workshop.turnOver()
+        workshop.narrow(narrow)
 
         for (sign, name) in [(-1.0, "neck"), (1.0, "tail")] {
             let rise = (name == "neck" ? 64.0 : 58.0) * .pi / 180
-            let height = name == "neck" ? 0.318 : 0.322
+            let height = name == "neck" ? 0.3 : 0.302
             let target = sign < 0 ? .pi + rise : 2 * .pi - rise
             let leg = .pi / 2 - sign * 0.06
             let angle = (target + leg) / 2
             let a = SIMD3(0, height, 0)
-            let b = a + SIMD3(cos(angle), sin(angle), 0) * sign * -1
-            let strip: (PaperCraneFacet) -> Bool = { ["a1", "a2"].contains($0.group) && $0.centroid.y > k && $0.centroid.x * sign > 0 }
-            workshop.cut(a, b, crease: true, where: strip)
-            workshop.perform([
-                Action(
-                    select: { strip($0) && side(a, b, bottom)($0) },
-                    kind: .swing(a, b, pivot: a + (b - a) * 0.05, turn: -sign),
-                    regroup: name,
-                ),
-            ])
+            let b = a + SIMD3(cos(angle), sin(angle), 0) * -sign
+            workshop.reverse(at: SIMD2(sign * 0.02, 0.85), a, b, side: sign, group: name, opening: Self.pocket)
         }
 
         let neck = workshop.facets.filter { $0.group == "neck" }
         let tip = neck.flatMap(\.points).min { $0.y < $1.y } ?? origin
         let base = SIMD3(-0.06, 0.4, 0)
         let along = simd_normalize(tip - base)
-        let headLength = 0.17
-        let crossing = tip - along * headLength
+        let crossingPoint = tip - along * 0.17
         let headAngle = atan2(along.y, along.x) - 0.8
-        let headA = crossing - SIMD3(cos(headAngle), sin(headAngle), 0) * 0.2
-        let headB = crossing + SIMD3(cos(headAngle), sin(headAngle), 0) * 0.2
-        let head: (PaperCraneFacet) -> Bool = { $0.group == "neck" }
-        workshop.cut(headA, headB, crease: true, where: head)
-        workshop.perform([
-            Action(
-                select: { head($0) && side(headA, headB, tip)($0) },
-                kind: .swing(headA, headB, pivot: crossing, turn: -1),
-                regroup: "neck",
-            ),
-        ])
+        let headDirection = SIMD3(cos(headAngle), sin(headAngle), 0)
+        let probe = tip - along * 0.05
+        workshop.reverse(at: SIMD2(probe.x, probe.y), crossingPoint - headDirection * 0.2, crossingPoint + headDirection * 0.2, side: -1, group: "neck", opening: 0)
 
-        let spread = 0.44 * .pi
-        workshop.perform(
-            [
-                Action(
-                    select: group("w1"),
-                    kind: .fold(kiteRight, kiteLeft, mountain: false, angle: spread, layering: .keep),
-                ),
-                Action(
-                    select: group("w2"),
-                    kind: .fold(kiteRight, kiteLeft, mountain: true, angle: spread, layering: .keep),
-                    arrow: false,
-                ),
-            ],
-            camera: PaperCraneCamera(yaw: 0.5, pitch: -0.36),
-        )
+        workshop.spread()
 
         return workshop.folds
     }
 
-    private static func affine(
-        _ point: SIMD3<Double>,
-        from: (SIMD3<Double>, SIMD3<Double>, SIMD3<Double>),
-        to: (SIMD3<Double>, SIMD3<Double>, SIMD3<Double>),
-    ) -> SIMD3<Double> {
-        let u = from.1 - from.0
-        let v = from.2 - from.0
-        let p = point - from.0
-        let determinant = u.x * v.y - u.y * v.x
-        guard abs(determinant) > 0.000_001 else { return point }
-        let s = (p.x * v.y - p.y * v.x) / determinant
-        let t = (u.x * p.y - u.y * p.x) / determinant
-        return to.0 + (to.1 - to.0) * s + (to.2 - to.0) * t
+    mutating func turnOver() {
+        let all = Array(facets.indices)
+        let samples = Self.samples { progress in
+            PaperCranePose.turn(around: Self.origin, axis: SIMD3(0, 1, 0), angle: .pi * progress)
+                .then(PaperCranePose(rotation: PaperCranePose.identity.rotation, translation: SIMD3(0, 0, 0.35 * sin(.pi * progress))))
+        }
+        perform([Motion(facets: all, samples: samples, layering: .flip, arrow: false)], turnOver: true)
+    }
+
+    mutating func squash(at point: SIMD2<Double>, spine: SIMD3<Double>) {
+        let hinge = Self.bottom
+        let crease = simd_normalize(hinge + spine)
+        let flap = cut(component(at: point, line: Self.origin, hinge), Self.origin, crease)
+        let layers = flap.map { facets[$0].layer }
+        let middle = ((layers.min() ?? 0) + (layers.max() ?? 0)) / 2
+        let hingeSide = PaperCraneGeometry.side(hinge * 0.5 + spine * 0.1, Self.origin, crease)
+        func group(top: Bool, nearHinge: Bool) -> [Int] {
+            flap.filter { index in
+                (facets[index].layer > middle) == top
+                    && (PaperCraneGeometry.side(facets[index].centroid, Self.origin, crease) * hingeSide > 0) == nearHinge
+            }
+        }
+
+        let up = SIMD3<Double>(0, 0, 1)
+        let lift = PaperCranePose.turn(around: Self.origin, axis: hinge, angle: .pi / 2)
+        let raise = simd_dot(lift.rotation.act(spine), up) > 0 ? 1.0 : -1.0
+        let split = 0.42
+        let c = cos(Double.pi / 4)
+        var poses: [[PaperCranePose]] = Array(repeating: [], count: 4)
+        for step in 0...Self.sampleCount {
+            let u = Double(step) / Double(Self.sampleCount)
+            if u < split {
+                let pose = PaperCranePose.turn(around: Self.origin, axis: hinge, angle: raise * .pi / 2 * u / split)
+                for index in poses.indices {
+                    poses[index].append(pose)
+                }
+                continue
+            }
+            let gamma = (1 - (u - split) / (1 - split)) * .pi / 2
+            let height = c * tan(gamma / 2)
+            let reach = max(0, 1 - c * c - height * height).squareRoot()
+            let spineNow = hinge * cos(gamma) + up * sin(gamma)
+            let topCrease = hinge * c + up * height - spine * reach
+            let bottomCrease = hinge * c + up * height + spine * reach
+            poses[0].append(.carry((hinge, crease), to: (hinge, topCrease), around: Self.origin))
+            poses[1].append(.carry((crease, spine), to: (topCrease, spineNow), around: Self.origin))
+            poses[2].append(.carry((spine, crease), to: (spineNow, bottomCrease), around: Self.origin))
+            poses[3].append(.carry((crease, hinge), to: (bottomCrease, hinge), around: Self.origin))
+        }
+
+        let groups = [group(top: true, nearHinge: true), group(top: true, nearHinge: false), group(top: false, nearHinge: false), group(top: false, nearHinge: true)]
+        let layering = settled(Array(zip(groups, poses)))
+        perform(zip(groups, poses).enumerated().map { index, entry in
+            Motion(
+                facets: entry.0,
+                samples: entry.1,
+                layering: .custom(layering),
+                crease: index == 0 ? (Self.origin, crease) : nil,
+                arrow: index == 1,
+            )
+        })
+    }
+
+    mutating func kites() {
+        for sign in [-1.0, 1.0] {
+            let half = facets.indices.filter { facets[$0].centroid.x * sign > 0 && facets[$0].centroid.y > 0 }
+            let ceiling = half.map { facets[$0].layer }.max() ?? 0
+            regroup("face", half.filter { abs(facets[$0].layer - ceiling) < 0.000_1 })
+        }
+
+        var motions: [Motion] = []
+        for (corner, point, window) in [(Self.kiteLeft, SIMD2(-0.42, 0.52), 0.0...0.62), (Self.kiteRight, SIMD2(0.42, 0.52), 0.38...1.0)] {
+            let flap = component(at: point, line: corner, Self.bottom)
+            let layers = flap.map { facets[$0].layer }
+            let middle = ((layers.min() ?? 0) + (layers.max() ?? 0)) / 2
+            regroup("kiteTop", flap.filter { facets[$0].layer > middle })
+            regroup("kiteInner", flap.filter { facets[$0].layer <= middle })
+            motions.append(Motion(
+                facets: flap,
+                samples: fold(flap, corner, Self.bottom),
+                window: window,
+                layering: .over,
+                crease: (corner, Self.bottom),
+            ))
+        }
+        perform(motions)
+    }
+
+    mutating func petal() {
+        let face = facets.indices.filter { facets[$0].group == "face" }
+        cut(face, Self.kiteLeft, Self.kiteRight)
+        let center = facets.indices.filter { facets[$0].group == "face" && facets[$0].centroid.y > Self.k }
+        let axis = simd_normalize(Self.kiteRight - Self.kiteLeft)
+        let split = 0.35
+        let probe = PaperCranePose.turn(around: Self.kiteLeft, axis: axis, angle: .pi / 2).apply(Self.bottom).z > 0 ? 1.0 : -1.0
+
+        var motions: [Motion] = []
+        var layeringEntries: [([Int], [PaperCranePose])] = []
+        var centerPoses: [PaperCranePose] = []
+        for step in 0...Self.sampleCount {
+            let u = Double(step) / Double(Self.sampleCount)
+            let theta = max(0, (u - split) / (1 - split)) * .pi
+            centerPoses.append(.turn(around: Self.kiteLeft, axis: axis, angle: probe * theta))
+        }
+        layeringEntries.append((center, centerPoses))
+
+        for (corner, edge) in [(Self.kiteLeft, SIMD3(-0.5, 0.5, 0)), (Self.kiteRight, SIMD3(0.5, 0.5, 0))] {
+            let sideSign: Double = corner.x < 0 ? -1 : 1
+            let topFlap = facets.indices.filter { facets[$0].group == "kiteTop" && facets[$0].centroid.x * sideSign > 0 }
+            let innerFlap = facets.indices.filter { facets[$0].group == "kiteInner" && facets[$0].centroid.x * sideSign > 0 }
+            let unfold = fold(topFlap + innerFlap, corner, Self.bottom)
+            let kite = simd_normalize(Self.bottom - corner)
+            let book = simd_normalize(edge - corner)
+            let opening = acos(simd_dot(kite, book))
+            var topPoses: [PaperCranePose] = []
+            var innerPoses: [PaperCranePose] = []
+            var previous = book
+            for step in 0...Self.sampleCount {
+                let u = Double(step) / Double(Self.sampleCount)
+                if u < split {
+                    let pose = unfold[Int((u / split * Double(Self.sampleCount)).rounded())]
+                    topPoses.append(pose)
+                    innerPoses.append(pose)
+                    continue
+                }
+                let turned = centerPoses[step].rotation.act(kite)
+                let fold = PaperCraneGeometry.cone(turned, opening, kite, opening, near: previous + SIMD3(0, 0, 0.25))
+                previous = fold
+                let settled = unfold[unfold.count - 1]
+                topPoses.append(settled.then(.carry((kite, book), to: (turned, fold), around: corner)))
+                innerPoses.append(settled.then(.carry((book, kite), to: (fold, kite), around: corner)))
+            }
+            layeringEntries.append((topFlap, topPoses))
+            layeringEntries.append((innerFlap, innerPoses))
+        }
+
+        let layering = settled(layeringEntries)
+        motions.append(Motion(facets: center, samples: centerPoses, layering: .custom(layering), group: "wing", crease: (Self.kiteLeft, Self.kiteRight)))
+        for (index, entry) in layeringEntries.dropFirst().enumerated() {
+            motions.append(Motion(
+                facets: entry.0,
+                samples: entry.1,
+                layering: .custom(layering),
+                group: index.isMultiple(of: 2) ? "wing" : "inner",
+                arrow: false,
+            ))
+        }
+        perform(motions)
+        regroup("body", facets.indices.filter { facets[$0].group == "face" })
+    }
+
+    mutating func narrow(_ narrow: Double) {
+        let left = SIMD3(-narrow, Self.k, 0)
+        let right = SIMD3(narrow, Self.k, 0)
+        let leftFlap = component(at: SIMD2(-0.12, 0.62), line: Self.bottom, left)
+        let rightFlap = component(at: SIMD2(0.12, 0.62), line: Self.bottom, right)
+        perform([
+            Motion(facets: leftFlap, samples: fold(leftFlap, Self.bottom, left), window: 0...0.6, layering: .over, crease: (Self.bottom, left)),
+            Motion(facets: rightFlap, samples: fold(rightFlap, Self.bottom, right), window: 0.4...1, layering: .over, crease: (Self.bottom, right)),
+        ])
+    }
+
+    mutating func reverse(at point: SIMD2<Double>, _ a: SIMD3<Double>, _ b: SIMD3<Double>, side: Double, group: String, opening amount: Double) {
+        let leg = component(at: point, line: a, b)
+        let spine = (Self.origin, Self.bottom)
+        let seed = SIMD2(side * 0.08, 0.05)
+        let front = Set(component(at: seed, line: spine.0, spine.1))
+        let back = Set(component(at: seed, depth: -1, line: spine.0, spine.1))
+        let legFront = leg.filter { front.contains($0) }
+        let legBack = leg.filter { back.contains($0) }
+        let bodyFront = front.subtracting(leg).sorted()
+        let bodyBack = back.subtracting(leg).sorted()
+
+        let layers = leg.map { facets[$0].layer }
+        let middle = ((layers.min() ?? 0) + (layers.max() ?? 0)) / 2
+        let ahead = legFront.sorted { facets[$0].layer > facets[$1].layer }
+        let behind = legBack.sorted { facets[$0].layer < facets[$1].layer }
+        let frontFloor = ahead.map { facets[$0].layer }.min() ?? middle
+        let backCeiling = behind.map { facets[$0].layer }.max() ?? middle
+        var tucked: [Int: Double] = [:]
+        for (rank, index) in ahead.enumerated() {
+            tucked[index] = frontFloor - 0.000_1 * Double(ahead.count - rank)
+        }
+        for (rank, index) in behind.enumerated() {
+            tucked[index] = backCeiling + 0.000_1 * Double(behind.count - rank)
+        }
+
+        let up = SIMD3<Double>(0, 1, 0)
+        let bodyCenter = center(bodyFront)
+        let opening = PaperCranePose.turn(around: Self.origin, axis: up, angle: 0.3).apply(bodyCenter).z > bodyCenter.z ? 1.0 : -1.0
+        let hinge = simd_normalize(b - a)
+        let legCenter = center(legFront)
+        let inward = PaperCranePose.turn(around: a, axis: hinge, angle: 0.3).apply(legCenter).z < legCenter.z ? 1.0 : -1.0
+        var poses: [[PaperCranePose]] = Array(repeating: [], count: 4)
+        for step in 0...Self.sampleCount {
+            let u = Double(step) / Double(Self.sampleCount)
+            let spread = amount * sin(.pi * u)
+            let openFront = PaperCranePose.turn(around: Self.origin, axis: up, angle: opening * spread)
+            let openBack = PaperCranePose.turn(around: Self.origin, axis: up, angle: -opening * spread)
+            poses[0].append(openFront)
+            poses[1].append(openBack)
+            poses[2].append(PaperCranePose.turn(around: a, axis: hinge, angle: inward * .pi * u).then(openFront))
+            poses[3].append(PaperCranePose.turn(around: a, axis: hinge, angle: -inward * .pi * u).then(openBack))
+        }
+        perform([
+            Motion(facets: bodyFront, samples: poses[0], arrow: false),
+            Motion(facets: bodyBack, samples: poses[1], arrow: false),
+            Motion(facets: legFront, samples: poses[2], layering: .custom(tucked), tucked: true, group: group, crease: (a, b)),
+            Motion(facets: legBack, samples: poses[3], layering: .custom(tucked), tucked: true, group: group, arrow: false),
+        ])
+    }
+
+    mutating func spread() {
+        let diagonals = [(SIMD2<Double>(0, -1), SIMD2<Double>(0, 1)), (SIMD2<Double>(-1, 0), SIMD2<Double>(1, 0))]
+        let mirror = diagonals.max { matches($0) < matches($1) } ?? diagonals[0]
+        let axis = mirror.1 - mirror.0
+        func paperCenter(_ index: Int) -> SIMD2<Double> {
+            facets[index].paper.reduce(SIMD2<Double>.zero, +) / Double(facets[index].paper.count)
+        }
+        let front = paperCenter(stack(at: SIMD2(0, -0.2)).first ?? 0)
+        func side(_ point: SIMD2<Double>) -> Double {
+            axis.x * (point.y - mirror.0.y) - axis.y * (point.x - mirror.0.x)
+        }
+        func onFront(_ index: Int) -> Bool {
+            side(paperCenter(index)) * side(front) > 0
+        }
+        func touches(_ index: Int, _ point: SIMD3<Double>) -> Bool {
+            facets[index].points.contains { simd_distance($0, point) < 0.000_01 }
+        }
+        let tip = SIMD3<Double>(0, 2 * Self.k - 1, 0)
+        let corners = [mirror.0, mirror.1]
+        let neckCorner = corners.first { corner in
+            facets.contains { $0.group == "neck" && $0.paper.contains { simd_distance($0, corner) < 0.000_01 } }
+        } ?? mirror.0
+        let faces = facets.indices.filter { facets[$0].group == "body" && touches($0, Self.origin) }
+        let wings = facets.indices.filter { touches($0, tip) }
+
+        let across = SIMD3<Double>(1, 0, 0)
+        let faceFront = faces.filter(onFront)
+        let wingFront = wings.filter(onFront)
+        let faceCenter = center(faceFront)
+        let tilt = PaperCranePose.turn(around: Self.origin, axis: across, angle: 0.2).apply(faceCenter).z > faceCenter.z ? 1.0 : -1.0
+        let wingCenter = center(wingFront)
+        let lower = PaperCranePose.turn(around: Self.kiteLeft, axis: across, angle: 0.2).apply(wingCenter).z > wingCenter.z ? 1.0 : -1.0
+        func face(_ sign: Double) -> (Double) -> PaperCranePose {
+            { PaperCranePose.turn(around: Self.origin, axis: across, angle: sign * tilt * Self.lean * $0) }
+        }
+        func wing(_ sign: Double) -> (Double) -> PaperCranePose {
+            { PaperCranePose.turn(around: Self.kiteLeft, axis: across, angle: sign * lower * Self.drop * $0).then(face(sign)($0)) }
+        }
+        settle(
+            drivers: [
+                Driver(facets: faceFront, pose: face(1), group: nil),
+                Driver(facets: faces.filter { !onFront($0) }, pose: face(-1), group: nil),
+                Driver(facets: wingFront, pose: wing(1), group: "w1", crease: (Self.kiteRight, Self.kiteLeft), arrow: true),
+                Driver(facets: wings.filter { !onFront($0) }, pose: wing(-1), group: "w2"),
+            ],
+            mirror: mirror,
+            front: front,
+            camera: PaperCraneCamera(yaw: 1.0, pitch: -0.45),
+            closed: facets.indices.filter { ["neck", "tail"].contains(facets[$0].group) },
+            bias: { point in
+                let along = simd_dot(point - mirror.0, simd_normalize(axis))
+                let offset = point - mirror.0 - simd_normalize(axis) * along
+                guard simd_length(offset) < 0.000_01, simd_length(point) > 0.01, simd_length(point) < 0.42 else { return .zero }
+                return SIMD3(simd_dot(point, neckCorner) > 0 ? -0.03 : 0.03, 0, 0)
+            },
+        )
+    }
+
+    private func matches(_ line: (SIMD2<Double>, SIMD2<Double>)) -> Int {
+        let unit = simd_normalize(line.1 - line.0)
+        var count = 0
+        for facet in facets {
+            for point in facet.paper {
+                let offset = point - line.0
+                let image = line.0 + unit * (2 * simd_dot(offset, unit)) - offset
+                guard let other = facets.first(where: { candidate in
+                    candidate.paper.contains { simd_distance($0, image) < 0.000_01 }
+                }) else { continue }
+                let here = facet.place(point)
+                let there = other.place(image)
+                if simd_distance(SIMD2(here.x, here.y), SIMD2(there.x, there.y)) < 0.000_1 {
+                    count += 1
+                }
+            }
+        }
+        return count
+    }
+
+    func settled(_ entries: [([Int], [PaperCranePose])]) -> [Int: Double] {
+        let moving = Set(entries.flatMap(\.0))
+        let ceiling = facets.indices.filter { !moving.contains($0) }.map { facets[$0].layer }.max() ?? 0
+        let heights = entries.flatMap { indices, poses -> [(Int, Double)] in
+            let probe = poses[Int(Double(poses.count - 1) * 0.97)]
+            return indices.map { ($0, probe.apply(facets[$0].centroid + SIMD3(0, 0, facets[$0].layer * 0.001)).z) }
+        }
+        var layers: [Int: Double] = [:]
+        for (rank, entry) in heights.sorted(by: { $0.1 < $1.1 }).enumerated() {
+            layers[entry.0] = ceiling + 0.01 * Double(rank + 1)
+        }
+        return layers
     }
 }

@@ -27,4 +27,17 @@ final class PaperCraneTimerViewTests: XCTestCase {
         XCTAssertEqual(bounds.midY, 50, accuracy: 0.001)
         XCTAssertGreaterThan(bounds.height, 3)
     }
+
+    func testCraneGlyphFillsItsBoxWithTheFoldedCraneSilhouette() {
+        let path = PaperCraneGlyph().path(in: CGRect(x: 0, y: 0, width: 48, height: 36)).cgPath
+        let bounds = path.boundingBoxOfPath
+
+        XCTAssertFalse(PaperCraneGlyph.outline.isEmpty)
+        XCTAssertGreaterThan(bounds.width, 30)
+        XCTAssertLessThanOrEqual(bounds.width, 48.001)
+        XCTAssertLessThanOrEqual(bounds.height, 36.001)
+        XCTAssertEqual(bounds.midX, 24, accuracy: 0.01)
+        XCTAssertEqual(bounds.midY, 18, accuracy: 0.01)
+        XCTAssertTrue(path.contains(CGPoint(x: bounds.midX, y: bounds.minY + bounds.height * 0.5)))
+    }
 }

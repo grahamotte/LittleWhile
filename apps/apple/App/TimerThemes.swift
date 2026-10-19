@@ -34,7 +34,7 @@ enum TimerThemes {
         ),
         TimerTheme(
             id: "paper-crane",
-            name: "Paper Crane",
+            name: "千羽鶴",
             colorScheme: .light,
             preview: AnyView(PaperCraneThemePreview()),
             screen: { AnyView(PaperCraneTimerView(snapshot: $0)) },
