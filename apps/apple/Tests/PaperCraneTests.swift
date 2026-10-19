@@ -226,6 +226,20 @@ final class PaperCraneTests: XCTestCase {
         XCTAssertEqual(PaperCrane.segments(goalSeconds: 0), 0)
     }
 
+    func testCraneNumbersTheSheetOnTheTableAcrossTheRun() {
+        XCTAssertEqual(PaperCrane.crane(elapsed: 0, goalSeconds: 1_500), 0)
+        XCTAssertEqual(PaperCrane.crane(elapsed: 59.9, goalSeconds: 1_500), 0)
+        XCTAssertEqual(PaperCrane.crane(elapsed: 60, goalSeconds: 1_500), 1)
+        XCTAssertEqual(PaperCrane.crane(elapsed: 1_499, goalSeconds: 1_500), 24)
+        XCTAssertEqual(PaperCrane.crane(elapsed: 1_790, goalSeconds: 1_500), 24)
+        XCTAssertEqual(PaperCrane.crane(elapsed: 0, goalSeconds: 1_500, cycle: 2), 50)
+        XCTAssertEqual(PaperCrane.crane(elapsed: 125, goalSeconds: 1_500, cycle: 1), 27)
+        XCTAssertEqual(PaperCrane.crane(elapsed: 25, goalSeconds: 30, cycle: 3), 3)
+        XCTAssertEqual(PaperCrane.crane(elapsed: -5, goalSeconds: 1_500, cycle: -1), 0)
+        XCTAssertEqual(PaperCrane.crane(elapsed: .nan, goalSeconds: 1_500), 0)
+        XCTAssertEqual(PaperCrane.crane(elapsed: 100, goalSeconds: 0), 0)
+    }
+
     func testCranesCountAsEachOneIsFinishedButNeverDuringRest() {
         XCTAssertEqual(PaperCrane.cranes(elapsed: 0, goalSeconds: 1_500), 0)
         XCTAssertEqual(PaperCrane.cranes(elapsed: 49.9, goalSeconds: 1_500), 0)

@@ -1,16 +1,48 @@
 import SwiftUI
 
+struct PaperCranePaper: Equatable {
+    let outside: SIMD3<Double>
+    let inside: SIMD3<Double>
+    let edge: SIMD3<Double>
+}
+
 enum PaperCranePalette {
     static let wall = [Color(red: 0.961, green: 0.945, blue: 0.914), Color(red: 0.918, green: 0.894, blue: 0.851)]
     static let fiber = Color(red: 0.55, green: 0.47, blue: 0.38)
     static let ink = Color(red: 0.24, green: 0.21, blue: 0.2)
     static let shadow = Color(red: 0.2, green: 0.13, blue: 0.1)
-    static let outside = SIMD3<Double>(0.8, 0.255, 0.224)
-    static let inside = SIMD3<Double>(0.86, 0.36, 0.31)
-    static let edge = Color(red: 0.48, green: 0.11, blue: 0.1)
+    static let papers = [
+        PaperCranePaper(outside: SIMD3(0.8, 0.255, 0.224), inside: SIMD3(0.86, 0.36, 0.31), edge: SIMD3(0.48, 0.11, 0.1)),
+        PaperCranePaper(outside: SIMD3(0.88, 0.47, 0.18), inside: SIMD3(0.92, 0.56, 0.29), edge: SIMD3(0.53, 0.24, 0.07)),
+        PaperCranePaper(outside: SIMD3(0.86, 0.66, 0.2), inside: SIMD3(0.91, 0.74, 0.32), edge: SIMD3(0.5, 0.36, 0.07)),
+        PaperCranePaper(outside: SIMD3(0.36, 0.58, 0.32), inside: SIMD3(0.46, 0.66, 0.41), edge: SIMD3(0.16, 0.31, 0.14)),
+        PaperCranePaper(outside: SIMD3(0.18, 0.55, 0.55), inside: SIMD3(0.29, 0.64, 0.63), edge: SIMD3(0.07, 0.29, 0.3)),
+        PaperCranePaper(outside: SIMD3(0.22, 0.42, 0.72), inside: SIMD3(0.33, 0.52, 0.79), edge: SIMD3(0.09, 0.2, 0.42)),
+        PaperCranePaper(outside: SIMD3(0.29, 0.27, 0.58), inside: SIMD3(0.39, 0.37, 0.67), edge: SIMD3(0.13, 0.11, 0.32)),
+        PaperCranePaper(outside: SIMD3(0.55, 0.3, 0.6), inside: SIMD3(0.64, 0.4, 0.68), edge: SIMD3(0.29, 0.12, 0.33)),
+        PaperCranePaper(outside: SIMD3(0.89, 0.48, 0.6), inside: SIMD3(0.93, 0.58, 0.68), edge: SIMD3(0.55, 0.2, 0.3)),
+        PaperCranePaper(outside: SIMD3(0.3, 0.32, 0.36), inside: SIMD3(0.4, 0.42, 0.46), edge: SIMD3(0.13, 0.14, 0.17)),
+    ]
 
-    static func tone(_ face: PaperCraneFace, shade: Double) -> SIMD3<Double> {
-        let base = face == .inside ? inside : outside
+    static func paper(run: UUID, crane: Int) -> PaperCranePaper {
+        let seed = withUnsafeBytes(of: run.uuid) { bytes in
+            bytes.reduce(UInt64(0xcbf2_9ce4_8422_2325)) { ($0 ^ UInt64($1)) &* 0x0000_0100_0000_01b3 }
+        }
+        var state = seed
+        var index = 0
+        for _ in 0..<max(0, crane) {
+            state &+= 0x9e37_79b9_7f4a_7c15
+            var mixed = state
+            mixed = (mixed ^ (mixed >> 30)) &* 0xbf58_476d_1ce4_e5b9
+            mixed = (mixed ^ (mixed >> 27)) &* 0x94d0_49bb_1331_11eb
+            mixed ^= mixed >> 31
+            index = (index + 1 + Int(mixed % UInt64(papers.count - 1))) % papers.count
+        }
+        return papers[index]
+    }
+
+    static func tone(_ face: PaperCraneFace, shade: Double, paper: PaperCranePaper = papers[0]) -> SIMD3<Double> {
+        let base = face == .inside ? paper.inside : paper.outside
         let darkened = base * min(1, shade)
         let glow = min(1, max(0, shade - 1) * 1.6)
         return darkened + (SIMD3<Double>(1, 0.985, 0.96) - darkened) * glow * 0.5
@@ -62,9 +94,17 @@ struct PaperCraneTimerView: View {
                             cycle: snapshot.loops ? snapshot.cycle : 0,
                         )
                         let tally = ledger.count(run: snapshot.runID, cranes: cranes)
+                        let paper = PaperCranePalette.paper(
+                            run: snapshot.runID,
+                            crane: PaperCrane.crane(
+                                elapsed: elapsed,
+                                goalSeconds: snapshot.goalSeconds,
+                                cycle: snapshot.loops ? snapshot.cycle : 0,
+                            ),
+                        )
 
                         ZStack(alignment: .top) {
-                            PaperCraneTable(scene: scene)
+                            PaperCraneTable(scene: scene, paper: paper)
                                 .accessibilityHidden(true)
 
                             VStack(spacing: 2) {
@@ -269,6 +309,7 @@ private struct PaperCraneBackdrop: View {
 
 struct PaperCraneTable: View {
     let scene: PaperCraneScene
+    var paper = PaperCranePalette.papers[0]
 
     var body: some View {
         Canvas { context, _ in
@@ -315,7 +356,7 @@ struct PaperCraneTable: View {
             contact.fill(path, with: .color(PaperCranePalette.shadow.opacity(contactOpacity)))
         }
 
-        let tone = PaperCranePalette.tone(polygon.face, shade: polygon.shade)
+        let tone = PaperCranePalette.tone(polygon.face, shade: polygon.shade, paper: paper)
         let bounds = path.boundingRect
         context.fill(path, with: .linearGradient(
             Gradient(colors: [
@@ -347,8 +388,8 @@ struct PaperCraneTable: View {
             }
         }
         context.stroke(seams, with: .color(PaperCranePalette.paint(tone)), lineWidth: 0.7)
-        context.stroke(creases, with: .color(PaperCranePalette.edge.opacity(0.22)), style: StrokeStyle(lineWidth: 0.6, lineCap: .round))
-        context.stroke(edges, with: .color(PaperCranePalette.edge.opacity(0.55)), style: StrokeStyle(lineWidth: 0.7, lineCap: .round, lineJoin: .round))
+        context.stroke(creases, with: .color(PaperCranePalette.paint(paper.edge).opacity(0.22)), style: StrokeStyle(lineWidth: 0.6, lineCap: .round))
+        context.stroke(edges, with: .color(PaperCranePalette.paint(paper.edge).opacity(0.55)), style: StrokeStyle(lineWidth: 0.7, lineCap: .round, lineJoin: .round))
     }
 
     private func drawGrain(in context: GraphicsContext) {
