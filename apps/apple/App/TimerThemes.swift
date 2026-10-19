@@ -32,6 +32,13 @@ enum TimerThemes {
             preview: AnyView(HeLovesMeThemePreview()),
             screen: { AnyView(HeLovesMeTimerView(snapshot: $0)) },
         ),
+        TimerTheme(
+            id: "paper-crane",
+            name: "千羽鶴",
+            colorScheme: .light,
+            preview: AnyView(PaperCraneThemePreview()),
+            screen: { AnyView(PaperCraneTimerView(snapshot: $0)) },
+        ),
     ]
 
     static func resolve(_ id: String) -> TimerTheme {
