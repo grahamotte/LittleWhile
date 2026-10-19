@@ -67,6 +67,14 @@ struct PaperCrane {
     }
 
     static let folds = PaperCraneWorkshop.crane()
+    static let resting: [Int] = {
+        let fold = folds[folds.count - 1]
+        let views = fold.end.map { $0.points.map { view($0, camera: fold.endCamera) } }
+        let stacks = fold.end.indices.map { index in
+            fold.end[index].layer * 0.001 * fold.endCamera.apply(stack(fold, index, at: 1).rotation.act(SIMD3(0, 0, 1))).z
+        }
+        return order(views, stacks: stacks, fixed: views.map { _ in false })
+    }()
     static let sheet = PaperCraneWorkshop.sheet()
     static let pivot = SIMD3<Double>(0, 0.3, 0)
     static let perspective = 6.0
@@ -257,7 +265,7 @@ struct PaperCrane {
             x: CGFloat(away * away) * layout.size.width * 0.45,
             y: (-lift - CGFloat(away * away) * 1.4) * base.scale,
         )
-        let polygons = render(facets, camera: camera, fit: base, standing: 1, offset: offset)
+        let polygons = render(facets, camera: camera, fit: base, standing: 1, offset: offset, order: Self.resting)
         return PaperCraneScene(
             polygons: polygons,
             hint: nil,
@@ -292,7 +300,7 @@ struct PaperCrane {
         return CGPoint(x: pivot.x + (viewed.x - pivot.x) * factor, y: pivot.y + (viewed.y - pivot.y) * factor)
     }
 
-    private func render(_ facets: [Posed], camera: PaperCraneCamera, fit: Fit, standing: Double, offset: CGPoint) -> [PaperCranePolygon] {
+    private func render(_ facets: [Posed], camera: PaperCraneCamera, fit: Fit, standing: Double, offset: CGPoint, order fixedOrder: [Int]? = nil) -> [PaperCranePolygon] {
         func screen(_ point: CGPoint) -> CGPoint {
             CGPoint(
                 x: fit.center.x + (point.x - fit.origin.x) * fit.scale + offset.x,
@@ -306,7 +314,7 @@ struct PaperCrane {
             let thickness = camera.apply(posed.stack.rotation.act(SIMD3(0, 0, 1))).z
             return posed.layer * 0.001 * (posed.tucked ? 1 : thickness)
         }
-        let order = Self.order(views, stacks: stacks, fixed: facets.map(\.tucked))
+        let order = fixedOrder ?? Self.order(views, stacks: stacks, fixed: facets.map(\.tucked))
 
         return order.map { facets[$0] }.map { posed in
             let viewed = posed.points.map { Self.view($0, camera: camera) }
@@ -489,7 +497,10 @@ extension PaperCraneWorkshop {
     static let kiteRight = SIMD3(k, k, 0)
     static let pocket = 0.95
     static let lean = 0.24
-    static let drop = Double.pi / 2 + lean + 0.06
+    static let drop = Double.pi / 2 + lean - 0.35
+    static let hinge = 0.3
+    static let neckRise = 72.0
+    static let tailRise = 62.0
 
     static func sheet() -> [PaperCraneFacet] {
         let corners = [SIMD2<Double>(0, -1), SIMD2(1, 0), SIMD2(0, 1), SIMD2(-1, 0)]
@@ -531,8 +542,8 @@ extension PaperCraneWorkshop {
         workshop.narrow(narrow)
 
         for (sign, name) in [(-1.0, "neck"), (1.0, "tail")] {
-            let rise = (name == "neck" ? 64.0 : 58.0) * .pi / 180
-            let height = name == "neck" ? 0.3 : 0.302
+            let rise = (name == "neck" ? Self.neckRise : Self.tailRise) * .pi / 180
+            let height = Self.hinge
             let target = sign < 0 ? .pi + rise : 2 * .pi - rise
             let leg = .pi / 2 - sign * 0.06
             let angle = (target + leg) / 2
@@ -543,7 +554,7 @@ extension PaperCraneWorkshop {
 
         let neck = workshop.facets.filter { $0.group == "neck" }
         let tip = neck.flatMap(\.points).min { $0.y < $1.y } ?? origin
-        let base = SIMD3(-0.06, 0.4, 0)
+        let base = SIMD3(-0.05, Self.hinge + 0.06, 0)
         let along = simd_normalize(tip - base)
         let crossingPoint = tip - along * 0.17
         let headAngle = atan2(along.y, along.x) - 0.8
@@ -815,7 +826,7 @@ extension PaperCraneWorkshop {
             ],
             mirror: mirror,
             front: front,
-            camera: PaperCraneCamera(yaw: 1.0, pitch: -0.45),
+            camera: PaperCraneCamera(yaw: 0.95, pitch: -0.42),
             closed: facets.indices.filter { ["neck", "tail"].contains(facets[$0].group) },
             bias: { point in
                 let along = simd_dot(point - mirror.0, simd_normalize(axis))
