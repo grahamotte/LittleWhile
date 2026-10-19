@@ -42,11 +42,11 @@ final class PaperCraneFoldingTests: XCTestCase {
     func testFacetsKnowWhichSideOfThePaperFacesTheViewer() {
         let sheet = facet(square)
         XCTAssertEqual(sheet.paperSign, 1)
-        XCTAssertEqual(sheet.visibleFace, .white)
-        XCTAssertEqual(facet(square.reversed()).visibleFace, .white)
+        XCTAssertEqual(sheet.visibleFace, .inside)
+        XCTAssertEqual(facet(square.reversed()).visibleFace, .inside)
 
         let flipped = sheet.moved(by: .turn(around: .zero, axis: SIMD3(0, 1, 0), angle: .pi))
-        XCTAssertEqual(flipped.visibleFace, .color)
+        XCTAssertEqual(flipped.visibleFace, .outside)
         assertPoint(flipped.place(SIMD2(1, 1)), SIMD3(-1, 1, 0))
         assertPoint(sheet.place(SIMD2(0.25, 0.5)), SIMD3(0.25, 0.5, 0))
         XCTAssertEqual(sheet.centroid, SIMD3(0.5, 0.5, 0))
@@ -150,7 +150,7 @@ final class PaperCraneFoldingTests: XCTestCase {
         let still = 1 - moving
         XCTAssertGreaterThan(fold.end[moving].layer, fold.end[still].layer)
         XCTAssertEqual(fold.end[moving].group, "flap")
-        XCTAssertEqual(fold.end[moving].visibleFace, .color)
+        XCTAssertEqual(fold.end[moving].visibleFace, .outside)
         XCTAssertEqual(fold.points(moving, at: 0.1), fold.pieces[moving].facet.points)
         XCTAssertEqual(fold.layer(moving, at: 0), fold.pieces[moving].facet.layer)
         XCTAssertEqual(fold.layer(moving, at: 1), fold.pieces[moving].endLayer)

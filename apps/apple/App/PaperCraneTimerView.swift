@@ -5,14 +5,13 @@ enum PaperCranePalette {
     static let fiber = Color(red: 0.55, green: 0.47, blue: 0.38)
     static let ink = Color(red: 0.24, green: 0.21, blue: 0.2)
     static let shadow = Color(red: 0.2, green: 0.13, blue: 0.1)
-    static let white = SIMD3<Double>(0.988, 0.976, 0.953)
-    static let color = SIMD3<Double>(0.8, 0.255, 0.224)
-    static let whiteEdge = Color(red: 0.69, green: 0.64, blue: 0.58)
-    static let colorEdge = Color(red: 0.48, green: 0.11, blue: 0.1)
+    static let outside = SIMD3<Double>(0.8, 0.255, 0.224)
+    static let inside = SIMD3<Double>(0.86, 0.36, 0.31)
+    static let edge = Color(red: 0.48, green: 0.11, blue: 0.1)
 
     static func tone(_ face: PaperCraneFace, shade: Double) -> SIMD3<Double> {
-        let base = face == .white ? white : color
-        let darkened = base * min(1, face == .white ? 1 - (1 - shade) * 0.55 : shade)
+        let base = face == .inside ? inside : outside
+        let darkened = base * min(1, shade)
         let glow = min(1, max(0, shade - 1) * 1.6)
         return darkened + (SIMD3<Double>(1, 0.985, 0.96) - darkened) * glow * 0.5
     }
@@ -348,9 +347,8 @@ struct PaperCraneTable: View {
             }
         }
         context.stroke(seams, with: .color(PaperCranePalette.paint(tone)), lineWidth: 0.7)
-        let edge = polygon.face == .white ? PaperCranePalette.whiteEdge : PaperCranePalette.colorEdge
-        context.stroke(creases, with: .color(edge.opacity(0.22)), style: StrokeStyle(lineWidth: 0.6, lineCap: .round))
-        context.stroke(edges, with: .color(edge.opacity(0.55)), style: StrokeStyle(lineWidth: 0.7, lineCap: .round, lineJoin: .round))
+        context.stroke(creases, with: .color(PaperCranePalette.edge.opacity(0.22)), style: StrokeStyle(lineWidth: 0.6, lineCap: .round))
+        context.stroke(edges, with: .color(PaperCranePalette.edge.opacity(0.55)), style: StrokeStyle(lineWidth: 0.7, lineCap: .round, lineJoin: .round))
     }
 
     private func drawGrain(in context: GraphicsContext) {

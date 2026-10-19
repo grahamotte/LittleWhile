@@ -3,8 +3,8 @@ import Foundation
 import simd
 
 enum PaperCraneFace: Equatable {
-    case white
-    case color
+    case inside
+    case outside
 }
 
 enum PaperCraneEdge: Equatable {
@@ -84,7 +84,7 @@ struct PaperCraneFacet: Equatable {
     }
 
     func face(of points: [SIMD3<Double>]) -> PaperCraneFace {
-        PaperCraneGeometry.newell(points).z * paperSign >= 0 ? .white : .color
+        PaperCraneGeometry.newell(points).z * paperSign >= 0 ? .inside : .outside
     }
 
     func moved(by pose: PaperCranePose) -> PaperCraneFacet {
@@ -371,6 +371,7 @@ struct PaperCraneWorkshop {
     }
 
     static let sampleCount = 60
+    static let thickness = 0.002
 
     private(set) var facets: [PaperCraneFacet]
     private(set) var seams: [(SIMD2<Double>, SIMD2<Double>)] = []
@@ -711,6 +712,38 @@ struct PaperCraneWorkshop {
                 pinch[corner] = true
             }
         }
+        var driven = Array(repeating: false, count: papers.count)
+        for index in owner.keys {
+            for corner in loops[index] {
+                driven[corner] = true
+            }
+        }
+        let signs = rests.map { PaperCraneGeometry.newell($0).z >= 0 ? 1.0 : -1.0 }
+        let outlines = facets.map { $0.points }
+        func interior(_ point: SIMD3<Double>, _ index: Int) -> Bool {
+            let outline = outlines[index]
+            guard PaperCraneGeometry.contains(SIMD2(point.x, point.y), outline) else { return false }
+            return outline.indices.allSatisfy { corner in
+                let a = SIMD2(outline[corner].x, outline[corner].y)
+                let b = SIMD2(outline[(corner + 1) % outline.count].x, outline[(corner + 1) % outline.count].y)
+                let direction = b - a
+                let length = simd_length(direction)
+                guard length > 0 else { return true }
+                let offset = SIMD2(point.x, point.y) - a
+                return abs(direction.x * offset.y - direction.y * offset.x) / length > 0.000_5
+            }
+        }
+        var contacts: [(node: Int, facet: Int, side: Double)] = []
+        for upper in facets.indices {
+            for lower in facets.indices where facets[lower].layer < facets[upper].layer - 0.000_000_1 {
+                for corner in Set(loops[lower]).subtracting(loops[upper]) where !driven[corner] && interior(positions[corner], upper) {
+                    contacts.append((corner, upper, -1))
+                }
+                for corner in Set(loops[upper]).subtracting(loops[lower]) where !driven[corner] && interior(positions[corner], lower) {
+                    contacts.append((corner, lower, 1))
+                }
+            }
+        }
         var rotations = facets.map { _ in simd_quatd(ix: 0, iy: 0, iz: 0, r: 1) }
         var samples = facets.map { _ in [PaperCranePose]() }
         var tracks = facets.map { _ in [[SIMD3<Double>]]() }
@@ -773,7 +806,25 @@ struct PaperCraneWorkshop {
                 for index in positions.indices where weights[index] > 0 {
                     positions[index] = sums[index] / weights[index]
                     if pinch[index] {
-                        positions[index].z *= 1 - progress
+                        positions[index].z *= 1 - 0.4 * progress
+                    }
+                }
+                if step > 0 {
+                    let gap = Self.thickness * min(1, progress * 4)
+                    let planes = facets.indices.map { index -> (SIMD3<Double>, SIMD3<Double>) in
+                        let points = loops[index].map { positions[$0] }
+                        let normal = PaperCraneGeometry.newell(points)
+                        let length = simd_length(normal)
+                        let center = points.reduce(SIMD3<Double>.zero, +) / Double(points.count)
+                        return (length > 0 ? normal / length * signs[index] : SIMD3(0, 0, 1), center)
+                    }
+                    for contact in contacts {
+                        let (normal, center) = planes[contact.facet]
+                        let distance = simd_dot(positions[contact.node] - center, normal)
+                        let target = contact.side * gap
+                        if contact.side * (distance - target) < 0 {
+                            positions[contact.node] += normal * (target - distance)
+                        }
                     }
                 }
                 for index in positions.indices {

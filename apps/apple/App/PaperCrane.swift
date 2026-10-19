@@ -496,7 +496,7 @@ extension PaperCraneWorkshop {
     static let kiteLeft = SIMD3(-k, k, 0)
     static let kiteRight = SIMD3(k, k, 0)
     static let pocket = 0.95
-    static let lean = 0.24
+    static let lean = 0.38
     static let drop = Double.pi / 2 + lean - 0.35
     static let hinge = 0.3
     static let neckRise = 72.0

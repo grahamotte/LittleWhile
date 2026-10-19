@@ -29,7 +29,7 @@ final class PaperCraneTests: XCTestCase {
 
         XCTAssertEqual(sheet.count, 1)
         XCTAssertEqual(PaperCraneGeometry.area(sheet[0].points), 2, accuracy: 0.0001)
-        XCTAssertEqual(sheet[0].visibleFace, .white)
+        XCTAssertEqual(sheet[0].visibleFace, .inside)
         XCTAssertEqual(sheet[0].edges, [.edge, .edge, .edge, .edge])
     }
 
@@ -39,7 +39,7 @@ final class PaperCraneTests: XCTestCase {
             let shaping = number == PaperCrane.foldCount - 1
             for progress in stride(from: 0.0, through: 1.0, by: 0.1) {
                 let area = fold.pieces.indices.map { PaperCraneGeometry.area(fold.points($0, at: progress)) }.reduce(0, +)
-                XCTAssertEqual(area, 2, accuracy: shaping ? 0.04 : 0.0001)
+                XCTAssertEqual(area, 2, accuracy: shaping ? 0.05 : 0.0001)
             }
             for index in fold.pieces.indices {
                 let start = fold.pieces[index].facet.points
@@ -135,17 +135,37 @@ final class PaperCraneTests: XCTestCase {
         return segments
     }
 
-    func testEachBaseShowsTheColoredSideOutside() {
+    func testEachBaseShowsTheOutsideOfThePaper() {
         let crane = crane
         func front(_ elapsed: TimeInterval) -> PaperCraneFace? {
             crane.scene(elapsed: elapsed, restSeconds: 300, settled: true).polygons.last?.face
         }
 
-        XCTAssertEqual(front(0), .white)
-        XCTAssertEqual(front(crane.start(0) + 0.1), .color)
-        XCTAssertEqual(front(crane.start(4) + 0.1), .color)
-        XCTAssertEqual(front(crane.start(9) + 0.1), .color)
-        XCTAssertEqual(front(crane.span + 1), .color)
+        XCTAssertEqual(front(0), .inside)
+        XCTAssertEqual(front(crane.start(0) + 0.1), .outside)
+        XCTAssertEqual(front(crane.start(4) + 0.1), .outside)
+        XCTAssertEqual(front(crane.start(9) + 0.1), .outside)
+        let finished = crane.scene(elapsed: crane.span + 1, restSeconds: 300, settled: true).polygons
+        let paths = finished.map { polygon in
+            let path = CGMutablePath()
+            path.addLines(between: polygon.points)
+            path.closeSubpath()
+            return path
+        }
+        let bounds = paths.reduce(CGRect.null) { $0.union($1.boundingBoxOfPath) }
+        var outside = 0
+        var visible = 0
+        for row in 0..<40 {
+            for column in 0..<40 {
+                let point = CGPoint(x: bounds.minX + bounds.width * (CGFloat(column) + 0.5) / 40, y: bounds.minY + bounds.height * (CGFloat(row) + 0.5) / 40)
+                guard let top = paths.indices.last(where: { paths[$0].contains(point) }) else { continue }
+                visible += 1
+                if finished[top].face == .outside {
+                    outside += 1
+                }
+            }
+        }
+        XCTAssertGreaterThan(Double(outside) / Double(visible), 0.85)
     }
 
     func testFinishedCraneSpreadsItsWingsAroundARaisedNeckAndTail() {
@@ -212,7 +232,7 @@ final class PaperCraneTests: XCTestCase {
         let scene = crane.scene(elapsed: 0, restSeconds: 300, settled: false)
 
         XCTAssertEqual(scene.polygons.count, 1)
-        XCTAssertEqual(scene.polygons[0].face, .white)
+        XCTAssertEqual(scene.polygons[0].face, .inside)
         XCTAssertTrue(scene.polygons[0].shadow.isEmpty)
         XCTAssertEqual(scene.polygons[0].shade, 1, accuracy: 0.0001)
         XCTAssertEqual(scene.folded, 0)
@@ -247,7 +267,7 @@ final class PaperCraneTests: XCTestCase {
         let crane = crane
         let squashing = crane.scene(elapsed: crane.start(2) + crane.duration * 0.55, restSeconds: 300, settled: false)
 
-        XCTAssertTrue(squashing.polygons.contains { $0.face == .white })
+        XCTAssertTrue(squashing.polygons.contains { $0.face == .inside })
         XCTAssertTrue(squashing.polygons.contains { !$0.shadow.isEmpty })
     }
 

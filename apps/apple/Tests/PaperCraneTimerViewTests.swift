@@ -4,16 +4,15 @@ import XCTest
 
 final class PaperCraneTimerViewTests: XCTestCase {
     func testFlatPaperKeepsItsColorAndTiltedPaperShadesOrGlows() {
-        XCTAssertEqual(PaperCranePalette.tone(.color, shade: 1), PaperCranePalette.color)
-        XCTAssertEqual(PaperCranePalette.tone(.white, shade: 1), PaperCranePalette.white)
+        XCTAssertEqual(PaperCranePalette.tone(.outside, shade: 1), PaperCranePalette.outside)
+        XCTAssertEqual(PaperCranePalette.tone(.inside, shade: 1), PaperCranePalette.inside)
+        XCTAssertGreaterThan(PaperCranePalette.inside.x, PaperCranePalette.outside.x)
 
-        let shadedColor = PaperCranePalette.tone(.color, shade: 0.6)
-        let shadedWhite = PaperCranePalette.tone(.white, shade: 0.6)
-        XCTAssertLessThan(shadedColor.x, PaperCranePalette.color.x)
-        XCTAssertGreaterThan(shadedWhite.x / PaperCranePalette.white.x, shadedColor.x / PaperCranePalette.color.x)
+        let shaded = PaperCranePalette.tone(.outside, shade: 0.6)
+        XCTAssertEqual(shaded.x, PaperCranePalette.outside.x * 0.6, accuracy: 0.0001)
 
-        let glowing = PaperCranePalette.tone(.color, shade: 1.3)
-        XCTAssertGreaterThan(glowing.y, PaperCranePalette.color.y)
+        let glowing = PaperCranePalette.tone(.outside, shade: 1.3)
+        XCTAssertGreaterThan(glowing.y, PaperCranePalette.outside.y)
         XCTAssertLessThanOrEqual(glowing.x, 1)
     }
 
