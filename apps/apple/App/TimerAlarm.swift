@@ -254,14 +254,10 @@ final class TimerAlarm {
             if existingAlarm?.state == .alerting {
                 continue
             }
-            if let existingAlarm, existingAlarm.state == .scheduled {
-                if existingAlarm.deadline == nil {
-                    continue
-                }
-                if let existingDeadline = existingAlarm.deadline,
-                   abs(existingDeadline.timeIntervalSince(needed.deadline)) < 0.5 {
-                    continue
-                }
+            if let existingAlarm, existingAlarm.state == .scheduled,
+               let existingDeadline = existingAlarm.deadline,
+               abs(existingDeadline.timeIntervalSince(needed.deadline)) < 0.5 {
+                continue
             }
             if let existingAlarm {
                 do {
@@ -332,8 +328,7 @@ private final class SystemTimerAlarmManager: TimerAlarmManager {
     }
 
     func schedule(id: UUID, deadline: Date, runID: UUID, phase: TimerAlarmPhase) async throws {
-        let title: LocalizedStringResource = "Time is up"
-        let countdownTitle: LocalizedStringResource = phase == .rest ? "Rest" : "Focus"
+        let title: LocalizedStringResource = phase == .rest ? "Rest is up" : "Focus is up"
         let alert: AlarmPresentation.Alert
         if #available(iOS 26.1, *) {
             alert = AlarmPresentation.Alert(title: title)
@@ -344,20 +339,12 @@ private final class SystemTimerAlarmManager: TimerAlarmManager {
             )
         }
         let attributes = AlarmAttributes(
-            presentation: AlarmPresentation(
-                alert: alert,
-                countdown: AlarmPresentation.Countdown(title: countdownTitle),
-                paused: AlarmPresentation.Paused(
-                    title: "Paused",
-                    resumeButton: AlarmButton(text: "Resume", textColor: .white, systemImageName: "play.fill"),
-                ),
-            ),
+            presentation: AlarmPresentation(alert: alert),
             metadata: FocusAlarmMetadata(runID: runID),
             tintColor: Color(red: 0.76, green: 0.42, blue: 0.28),
         )
-        let remaining = max(1, deadline.timeIntervalSince(Date()))
-        let configuration = AlarmManager.AlarmConfiguration.timer(
-            duration: remaining,
+        let configuration = AlarmManager.AlarmConfiguration.alarm(
+            schedule: .fixed(max(deadline, Date().addingTimeInterval(1))),
             attributes: attributes,
             stopIntent: StopTimerAlarmIntent(runID: runID),
             sound: .default,
