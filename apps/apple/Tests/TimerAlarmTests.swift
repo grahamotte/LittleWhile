@@ -165,7 +165,7 @@ final class TimerAlarmTests: XCTestCase {
     }
 
     @MainActor
-    func testExistingCountdownWithoutDeadlineIsKept() async {
+    func testExistingCountdownWithoutDeadlineIsReplacedWithAFixedAlarm() async {
         let manager = AlarmManagerBoundary()
         let run = FocusRun(startedAt: date, goalSeconds: 300, resumedAt: date)
         manager.records = [TimerAlarmRecord(id: run.id, deadline: nil, state: .scheduled)]
@@ -174,8 +174,9 @@ final class TimerAlarmTests: XCTestCase {
         let covered = await alarm.synchronize(run: run)
 
         XCTAssertEqual(covered, .scheduled)
-        XCTAssertTrue(manager.schedules.isEmpty)
-        XCTAssertTrue(manager.cancellations.isEmpty)
+        XCTAssertEqual(manager.cancellations, [run.id])
+        XCTAssertEqual(manager.schedules.map(\.id), [run.id])
+        XCTAssertEqual(manager.records.map(\.deadline), [date.addingTimeInterval(300)])
     }
 
     @MainActor
