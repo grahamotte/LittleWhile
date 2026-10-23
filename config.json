@@ -36,7 +36,7 @@
     "size": "s-1vcpu-2gb"
   },
   "apps": {
-    "build": "1.1.0",
+    "build": "1.1.1",
     "contactEmail": "go@graham.lol",
     "contactFirstName": "Graham",
     "contactLastName": "Otte",
@@ -105,7 +105,7 @@
         }
       }
     },
-    "version": "1.1.0",
-    "whatsNew": "New 千羽鶴 (Paper Crane) theme: a square of paper folds into an origami crane as you focus, one crane for every focus minute, with a lifetime count of the cranes you've folded."
+    "version": "1.1.1",
+    "whatsNew": "New 千羽鶴 (Paper Crane) theme: a square of paper folds into an origami crane as you focus, one crane for every focus minute, each in its own paper color, with a lifetime count of the cranes you've folded. Settings now fit on one screen, the privacy policy link moved to the end of History, and alarms no longer show extra countdowns on the Lock Screen."
   }
 }
