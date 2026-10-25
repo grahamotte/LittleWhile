@@ -1,6 +1,6 @@
 # Little While
 
-<p align="center"><img src="assets/screenshots/iphone-large-he-loves-me.jpg" alt="Little While running the He Loves Me theme" width="300"></p>
+<p align="center"><img src="assets/screenshots/iphone-paper-crane.png" alt="Little While running the Paper Crane theme" width="300"></p>
 
 Little While is a Pomodoro focus timer for iPhone. Set a focus block and a rest period, loop them as long as you like, follow the countdown from your Lock Screen, and see your focus time add up on a monthly calendar.
 
