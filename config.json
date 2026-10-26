@@ -53,6 +53,7 @@
     "primaryLocale": "en-US",
     "promotionalText": "Pomodoro focus and rest cycles that loop automatically, a pause that keeps you on track, a focus calendar, playful themes, and Live Activities on your Lock Screen.",
     "releaseType": "AFTER_APPROVAL",
+    "subtitle": "Focus for a little while.",
     "supportUrl": "https://github.com/grahamotte/LittleWhile/blob/master/docs/support.md",
     "targets": {
       "apple": {
