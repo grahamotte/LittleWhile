@@ -41,7 +41,6 @@ frontend/dist
 .ruby-lsp
 /*/tmp
 /*/tmp/*
-xcuserdata/
 website/dist
 website/.astro
 website/.wrangler
