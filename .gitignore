@@ -41,3 +41,7 @@ frontend/dist
 /*/tmp
 /*/tmp/*
 xcuserdata/
+website/dist
+website/.astro
+website/.wrangler
+website/wrangler.json
