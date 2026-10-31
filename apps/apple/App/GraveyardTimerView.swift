@@ -31,9 +31,7 @@ private enum GraveyardPalette {
     static let fog = Color(red: 0.72, green: 0.86, blue: 0.84)
     static let wisp = Color(red: 0.55, green: 1, blue: 0.7)
     static let face = Color(red: 0.03, green: 0.04, blue: 0.07)
-    static let pumpkin = [Color(red: 1, green: 0.62, blue: 0.2), Color(red: 0.72, green: 0.3, blue: 0.04)]
-    static let pumpkinEdge = Color(red: 0.42, green: 0.16, blue: 0.03)
-    static let candle = Color(red: 1, green: 0.82, blue: 0.32)
+    static let crowEye = Color(red: 1, green: 0.82, blue: 0.32)
     static let ink = Color(red: 0.84, green: 0.94, blue: 0.93)
     static let partyHues = [0.07, 0.78, 0.33, 0.12, 0.85]
 
@@ -164,7 +162,6 @@ private struct GraveyardNight: View {
                 drawFog(in: context, size: size, depth: layout.graves.first { $0.row == row }?.ground.y ?? layout.horizon, layer: row)
             }
 
-            drawPumpkins(in: context, size: size)
             drawWisps(in: context, size: size)
             drawFog(in: context, size: size, depth: size.height * 0.97, layer: 3)
             if scene.party > 0 {
@@ -362,7 +359,7 @@ private struct GraveyardNight: View {
             let eye = max(0.6, crow * 0.06)
             local.fill(
                 Path(ellipseIn: CGRect(x: crow * 0.46 - eye, y: -crow * 0.47 - eye, width: eye * 2, height: eye * 2)),
-                with: .color(GraveyardPalette.candle),
+                with: .color(GraveyardPalette.crowEye),
             )
         }
     }
@@ -620,63 +617,6 @@ private struct GraveyardNight: View {
             clods.addEllipse(in: CGRect(x: point.x - radius, y: point.y - radius, width: radius * 2, height: radius * 2))
         }
         context.fill(clods, with: .color(GraveyardPalette.dirt.opacity(fade)))
-    }
-
-    private func drawPumpkins(in context: GraphicsContext, size: CGSize) {
-        for (x, y, scale, phase) in [(0.1, 0.955, 1.1, 0.0), (0.9, 0.945, 0.85, 2.1)] {
-            let radius = layout.stoneWidth * 0.34 * CGFloat(scale)
-            let center = CGPoint(x: size.width * CGFloat(x), y: size.height * CGFloat(y))
-            let flicker = 0.72 + 0.16 * sin(time * 9 + phase) + 0.12 * sin(time * 23 + phase)
-            let glow = radius * 3.2
-            context.fill(
-                Path(ellipseIn: CGRect(x: center.x - glow, y: center.y - glow, width: glow * 2, height: glow * 2)),
-                with: .radialGradient(
-                    Gradient(colors: [GraveyardPalette.candle.opacity(0.28 * flicker), GraveyardPalette.pumpkin[1].opacity(0.1 * flicker), GraveyardPalette.candle.opacity(0)]),
-                    center: center,
-                    startRadius: 0,
-                    endRadius: glow,
-                ),
-            )
-            var stem = Path()
-            stem.move(to: CGPoint(x: center.x - radius * 0.08, y: center.y - radius * 0.7))
-            stem.addQuadCurve(to: CGPoint(x: center.x + radius * 0.22, y: center.y - radius * 1.12), control: CGPoint(x: center.x - radius * 0.06, y: center.y - radius * 1.05))
-            context.stroke(stem, with: .color(GraveyardPalette.grass), style: StrokeStyle(lineWidth: radius * 0.16, lineCap: .round))
-            for lobe in [-0.5, 0.5, -0.2, 0.2, 0] {
-                let lobeRect = CGRect(x: center.x + radius * CGFloat(lobe) - radius * 0.62, y: center.y - radius * 0.78, width: radius * 1.24, height: radius * 1.56)
-                context.fill(Path(ellipseIn: lobeRect), with: .radialGradient(
-                    Gradient(colors: GraveyardPalette.pumpkin),
-                    center: CGPoint(x: lobeRect.midX - radius * 0.15, y: lobeRect.midY - radius * 0.3),
-                    startRadius: 0,
-                    endRadius: radius * 1.1,
-                ))
-                context.stroke(Path(ellipseIn: lobeRect), with: .color(GraveyardPalette.pumpkinEdge.opacity(0.7)), lineWidth: max(0.5, radius * 0.04))
-            }
-            var carving = Path()
-            for side in [-1.0, 1.0] {
-                let eye = CGPoint(x: center.x + radius * CGFloat(side) * 0.38, y: center.y - radius * 0.2)
-                carving.move(to: CGPoint(x: eye.x + radius * CGFloat(side) * 0.12, y: eye.y - radius * 0.2))
-                carving.addLine(to: CGPoint(x: eye.x + radius * 0.18, y: eye.y + radius * 0.1))
-                carving.addLine(to: CGPoint(x: eye.x - radius * 0.18, y: eye.y + radius * 0.1))
-                carving.closeSubpath()
-            }
-            carving.move(to: CGPoint(x: center.x - radius * 0.06, y: center.y + radius * 0.02))
-            carving.addLine(to: CGPoint(x: center.x + radius * 0.06, y: center.y + radius * 0.02))
-            carving.addLine(to: CGPoint(x: center.x, y: center.y - radius * 0.1))
-            carving.closeSubpath()
-            carving.move(to: CGPoint(x: center.x - radius * 0.58, y: center.y + radius * 0.16))
-            for step in 1...8 {
-                let x = center.x - radius * 0.58 + radius * 1.16 * CGFloat(step) / 8
-                carving.addLine(to: CGPoint(x: x, y: center.y + radius * (step.isMultiple(of: 2) ? 0.16 : 0.32)))
-            }
-            carving.addQuadCurve(to: CGPoint(x: center.x - radius * 0.58, y: center.y + radius * 0.16), control: CGPoint(x: center.x, y: center.y + radius * 0.8))
-            carving.closeSubpath()
-            context.fill(carving, with: .radialGradient(
-                Gradient(colors: [.white, GraveyardPalette.candle, GraveyardPalette.pumpkin[1]]),
-                center: CGPoint(x: center.x, y: center.y + radius * 0.1),
-                startRadius: 0,
-                endRadius: radius * 0.9 * CGFloat(flicker),
-            ))
-        }
     }
 
     private func drawWisps(in context: GraphicsContext, size: CGSize) {
