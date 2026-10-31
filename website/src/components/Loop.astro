@@ -1,0 +1,14 @@
+---
+import { loopHeight, loopPath } from "../lib/loop";
+
+const { count = 5, class: className, draw = false } = Astro.props as { count?: number; class?: string; draw?: boolean };
+---
+
+<svg
+  viewBox={`0 0 ${count * 100} ${loopHeight}`}
+  fill="none"
+  aria-hidden="true"
+  class:list={["loop overflow-visible", { "loop-draw": draw }, className]}
+>
+  <path d={loopPath(count)} pathLength="1" stroke="currentColor" stroke-linecap="round" />
+</svg>

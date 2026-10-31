@@ -1,9 +1,194 @@
 ---
 import config from "../../../config.json";
+import Loop from "../components/Loop.astro";
+import PauseDial from "../components/PauseDial.astro";
+import Phone from "../components/Phone.astro";
 import Layout from "../layouts/Layout.astro";
+import { appStoreUrl } from "../site";
+
+const steps = [
+  {
+    title: "Focus",
+    text: "Pick a stretch of time, anywhere from 1 to 120 minutes, and put your phone face down.",
+  },
+  {
+    title: "Rest",
+    text: "When focus ends, Little While lets you know and goes right into your break. Set it to 0 if you only want the one block.",
+  },
+  {
+    title: "Again",
+    text: "Turn on Loop and the next focus block starts when rest ends. It keeps going until you stop, and counts every cycle.",
+  },
+];
+
+const themes = [
+  {
+    name: "a paper crane",
+    src: "/crane.webp",
+    alt: "The Paper Crane theme: a red origami crane floating on cream paper under a 01:10 countdown, with a count of 117 cranes at the bottom.",
+    text: "A square of paper folds into a crane, one for every minute of focus, each in its own color. It remembers how many you've folded.",
+  },
+  {
+    name: "he loves me not",
+    src: "/daisy.webp",
+    alt: "The He Loves Me theme: a daisy on a grassy hill under a pale sky, a few petals already on the ground, under a 00:46 countdown.",
+    text: "A daisy lets go of its petals one at a time as the minutes pass. He loves me, he loves me not.",
+  },
+  {
+    name: "Mr Smiles",
+    src: "/smiles.webp",
+    alt: "The Mr Smiles theme: a yellow smiley face tumbling across a dark screen, with 29:47 left in the corner.",
+    text: "He bounces around the screen while you work. You can grab him and flick him off the walls, if you need a minute.",
+  },
+];
+
+const details = [
+  {
+    title: "On your Lock Screen",
+    text: "A Live Activity shows the time left and whether you're focusing or resting, on the Lock Screen and in the Dynamic Island.",
+  },
+  {
+    title: "Alarms you'll hear",
+    text: "On iOS 26 and later, the end of each focus and rest rings like an alarm, even in Silent mode or a Focus. You can stop it right from the alert.",
+  },
+  {
+    title: "Just yours",
+    text: "No account, ads, analytics, or tracking. Your settings and history stay on your iPhone.",
+  },
+];
 ---
 
 <Layout>
-  <h1 class="text-3xl">{config.site.title}</h1>
-  <p class="max-w-xl text-neutral-400">{config.site.description}</p>
+  <section class="relative overflow-hidden">
+    <div class="mx-auto grid w-full max-w-5xl items-center gap-14 px-6 pt-10 pb-20 sm:px-8 md:grid-cols-[minmax(0,1fr)_minmax(0,20rem)] md:gap-16 md:pt-16 md:pb-28">
+      <div class="max-w-xl">
+        <p class="font-serif text-lg text-ink-2 italic">a pomodoro timer for iPhone</p>
+        <h1 class="mt-3 font-serif text-[2.75rem] leading-[1.05] font-medium tracking-[-0.015em] text-balance sm:text-[4rem]">
+          Focus for a little&nbsp;while.
+        </h1>
+        <p class="mt-6 max-w-md text-lg leading-relaxed text-pretty text-ink-2">
+          Little While is a small timer for working in cycles: a stretch of focus, a real break, and around again. Something
+          nice to look at while you work, and a little calendar of the time you put in.
+        </p>
+        <div class="mt-9 flex flex-col items-start gap-4">
+          <a href={appStoreUrl} class="inline-block rounded-[10px]">
+            <img src="/app-store-badge.svg" alt="Download on the App Store" width="150" height="50" class="h-[50px] w-auto" />
+          </a>
+          <p class="text-sm text-ink-3">Free. Version {config.apps.version}, for iOS 18 or later.</p>
+        </div>
+      </div>
+      <Phone
+        src="/crane.webp"
+        alt="Little While running the Paper Crane theme: a red origami crane floating on cream paper under a 01:10 countdown."
+        class="mx-auto w-full max-w-[17rem] rotate-[1.5deg] md:max-w-none"
+        eager
+      />
+    </div>
+    <Loop count={12} draw class="relative left-1/2 block w-full max-w-none min-w-[52rem] -translate-x-1/2 text-ink/75 [--loop-stroke:4]" />
+  </section>
+
+  <section class="bg-card">
+    <div class="mx-auto w-full max-w-5xl px-6 py-24 sm:px-8 md:py-32">
+      <div class="max-w-xl">
+        <h2 class="font-serif text-[2rem] leading-tight font-medium text-balance sm:text-[2.5rem]">Focus, rest, repeat</h2>
+        <p class="mt-4 leading-relaxed text-ink-2">
+          The idea behind a pomodoro is simple: work for a while, then actually take the break. Little While makes the break part of
+          the plan.
+        </p>
+      </div>
+      <ol class="mt-14 grid gap-10 md:grid-cols-3 md:gap-12">
+        {
+          steps.map((step, index) => (
+            <li class="border-t border-line pt-6">
+              <span class="font-serif text-ink-3 italic tabular-nums">{index + 1}.</span>
+              <h3 class="mt-1 font-serif text-xl font-medium">{step.title}</h3>
+              <p class="mt-2 leading-relaxed text-ink-2">{step.text}</p>
+            </li>
+          ))
+        }
+      </ol>
+
+      <div class="mt-24 grid items-center gap-12 rounded-[28px] bg-paper px-6 py-12 sm:px-12 md:grid-cols-[minmax(0,1fr)_auto] md:gap-16 md:py-14">
+        <div class="max-w-lg">
+          <h3 class="font-serif text-[1.625rem] leading-tight font-medium text-balance">A pause that doesn't let you wander off</h3>
+          <p class="mt-4 leading-relaxed text-ink-2">
+            A paused timer usually turns into a forgotten one. So in Little While, pausing gives you one minute, then picks back up on
+            its own. Tap play to come back sooner, or stop if you're really done. Your progress is saved either way.
+          </p>
+        </div>
+        <PauseDial />
+      </div>
+    </div>
+  </section>
+
+  <section class="mx-auto w-full max-w-5xl px-6 py-24 sm:px-8 md:py-32">
+    <div class="max-w-xl">
+      <h2 class="font-serif text-[2rem] leading-tight font-medium text-balance sm:text-[2.5rem]">Something nice to look at</h2>
+      <p class="mt-4 leading-relaxed text-ink-2">
+        Each theme is a tiny scene that keeps time with you. Or pick Boring, a plain countdown, if you'd rather. With Reduce Motion on,
+        they all sit still.
+      </p>
+    </div>
+    <ul class="mt-14 grid gap-x-10 gap-y-16 sm:grid-cols-2 md:grid-cols-3">
+      {
+        themes.map((theme) => (
+          <li class="flex flex-col">
+            <Phone src={theme.src} alt={theme.alt} class="mx-auto w-full max-w-[15rem]" />
+            <h3 class="mt-8 font-serif text-xl italic">{theme.name}</h3>
+            <p class="mt-2 leading-relaxed text-ink-2">{theme.text}</p>
+          </li>
+        ))
+      }
+    </ul>
+  </section>
+
+  <section class="bg-paper-2">
+    <div class="mx-auto grid w-full max-w-5xl items-center gap-14 px-6 py-24 sm:px-8 md:grid-cols-[minmax(0,18rem)_minmax(0,1fr)] md:gap-20 md:py-32">
+      <Phone
+        src="/history.webp"
+        alt="The History screen: a September calendar with a dot under each day, bigger on days with more focus, above a list of past runs."
+        class="order-last mx-auto w-full max-w-[15rem] -rotate-[1.5deg] md:order-first md:max-w-none"
+      />
+      <div class="max-w-lg">
+        <h2 class="font-serif text-[2rem] leading-tight font-medium text-balance sm:text-[2.5rem]">Watch it add up</h2>
+        <p class="mt-4 leading-relaxed text-ink-2">
+          Every run is saved. A calendar puts a dot under each day, and the more you focused, the bigger the dot. It's a quiet way to
+          see your good weeks, and a gentle nudge on the slow ones.
+        </p>
+        <p class="mt-4 leading-relaxed text-ink-2">
+          Below it, each run lists when it was, how long you went, the theme, and how many cycles you finished. Swipe one away if you'd
+          rather not keep it.
+        </p>
+        <div class="mt-10 flex items-end gap-3" aria-hidden="true">
+          {[3, 1.5, 4, 3.5, 5, 0.75, 2.5].map((size) => <span class="rounded-full bg-ink/80" style={`width: ${size * 0.5}rem; height: ${size * 0.5}rem`} />)}
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="mx-auto grid w-full max-w-5xl gap-10 px-6 py-24 sm:px-8 md:grid-cols-3 md:gap-12 md:py-28">
+    {
+      details.map((item) => (
+        <div>
+          <h3 class="flex items-center gap-2.5 font-serif text-lg font-medium">
+            <span class="size-1.5 rounded-full bg-crane" aria-hidden="true" />
+            {item.title}
+          </h3>
+          <p class="mt-2 leading-relaxed text-ink-2">{item.text}</p>
+        </div>
+      ))
+    }
+  </section>
+
+  <section class="mx-auto w-full max-w-5xl px-6 pb-24 sm:px-8 md:pb-32">
+    <div class="relative overflow-hidden rounded-[28px] bg-night px-6 pt-12 pb-32 text-center text-paper sm:px-12 sm:pb-40">
+      <img src="/icon.png" alt="" width="72" height="72" class="mx-auto size-[72px] rounded-[16px]" loading="lazy" />
+      <h2 class="mt-6 font-serif text-[2rem] leading-tight font-medium text-balance">Try it for a little while</h2>
+      <p class="mx-auto mt-3 max-w-sm leading-relaxed text-paper/70">Free on the App Store, for iPhone. No account, nothing to sign up for.</p>
+      <a href={appStoreUrl} class="mt-8 inline-block rounded-[10px]">
+        <img src="/app-store-badge.svg" alt="Download on the App Store" width="150" height="50" class="h-[50px] w-auto" loading="lazy" />
+      </a>
+      <Loop count={10} class="absolute bottom-6 left-1/2 w-full min-w-[40rem] -translate-x-1/2 text-paper/85 [--loop-stroke:4]" />
+    </div>
+  </section>
 </Layout>

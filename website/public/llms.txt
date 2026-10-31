@@ -1,0 +1,25 @@
+# Little While
+
+> Little While is a Pomodoro focus and rest timer for iPhone. It is free on the App Store, with no ads, accounts, analytics, or tracking, requires iOS 18 or later, and is open source (MIT).
+
+Download on the App Store: https://apps.apple.com/us/app/little-while-pomodoro/id6811289278
+
+Features:
+
+- Focus blocks of 1 to 120 minutes and rest periods of 0 to 120 minutes. When focus ends, Little While alerts you and moves straight into rest.
+- Loop: when rest ends, the next focus block starts automatically, repeating until you stop. Completed cycles are counted.
+- Pausing is intentionally short: a paused timer shows a one-minute "Resuming in" countdown and then resumes on its own. Stopped runs keep their progress.
+- Themes: Paper Crane (a square of paper folds into an origami crane, one crane per focus minute, with a lifetime count), He Loves Me (a daisy drops its petals as time passes), Mr Smiles (a smiley face bounces around the screen and can be flicked), and Boring (a plain countdown). Themes stay still with Reduce Motion on.
+- History: a monthly calendar marks each day with a dot sized by focus time, above a list of runs with time spent, theme, and cycles. Runs can be deleted.
+- Live Activities show the time left and whether you are in focus or rest on the Lock Screen and in the Dynamic Island.
+- On iOS 26 or later, the end of each focus and rest period is a system alarm that sounds even in Silent mode or a Focus. Otherwise it uses local notifications.
+- Settings and history stay on the iPhone.
+
+## Docs
+
+- [Support](https://github.com/grahamotte/LittleWhile/blob/master/docs/support.md): How to use Little While and how to get help.
+- [Privacy Policy](https://littlewhile.app/privacy): Little While collects no data.
+
+## Optional
+
+- [Source code](https://github.com/grahamotte/LittleWhile): The Little While repository on GitHub.

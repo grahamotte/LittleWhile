@@ -1,0 +1,48 @@
+---
+import { pauseWindow } from "../lib/pause";
+---
+
+<figure data-pause-dial class="flex flex-col items-center gap-4" style="--fraction: 1">
+  <div class="relative size-32 rounded-full border-[3px] border-ink/15" aria-hidden="true">
+    <div class="pause-wedge absolute inset-[6px] rounded-full"></div>
+  </div>
+  <figcaption class="font-rounded text-lg font-medium tabular-nums">
+    Resuming in <span data-pause-seconds>{pauseWindow}</span>s
+  </figcaption>
+</figure>
+
+<script>
+  import { pauseState } from "../lib/pause";
+
+  const dial = document.querySelector<HTMLElement>("[data-pause-dial]");
+  const seconds = dial?.querySelector("[data-pause-seconds]");
+  const still = matchMedia("(prefers-reduced-motion: reduce)");
+
+  if (dial && seconds) {
+    let start: number | undefined;
+    let frame: number | undefined;
+
+    const render = (elapsed: number) => {
+      const state = pauseState(elapsed);
+      dial.style.setProperty("--fraction", String(state.fraction));
+      seconds.textContent = String(state.seconds);
+    };
+
+    const tick = (now: number) => {
+      start ??= now;
+      render((now - start) / 1000);
+      frame = requestAnimationFrame(tick);
+    };
+
+    new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting && !still.matches && frame === undefined) {
+        frame = requestAnimationFrame(tick);
+      } else if (!entry.isIntersecting && frame !== undefined) {
+        cancelAnimationFrame(frame);
+        frame = undefined;
+        start = undefined;
+        render(0);
+      }
+    }).observe(dial);
+  }
+</script>

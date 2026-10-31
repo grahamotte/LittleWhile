@@ -1,0 +1,15 @@
+---
+const { src, alt, class: className, eager = false } = Astro.props as { src: string; alt: string; class?: string; eager?: boolean };
+---
+
+<div class:list={["phone", className]}>
+  <img
+    src={src}
+    alt={alt}
+    width="720"
+    height="1565"
+    class="block h-auto w-full rounded-[inherit]"
+    loading={eager ? "eager" : "lazy"}
+    fetchpriority={eager ? "high" : "auto"}
+  />
+</div>
