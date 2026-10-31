@@ -240,9 +240,9 @@ depends = ["tsc"]
 run = "cd frontend && pnpm test"
 
 [tasks."test:website"]
-description = "Type-check the Astro website"
+description = "Type-check the Astro website and run its tests"
 depends = ["dependencies:website"]
-run = "cd website && pnpm exec astro check"
+run = "cd website && pnpm exec astro check && pnpm test"
 
 [tasks."test:gems"]
 description = "Run unit tests for all shared Ruby gems"

@@ -1,7 +1,112 @@
 @import "tailwindcss";
 
+@theme {
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", system-ui, sans-serif;
+  --font-serif: ui-serif, "New York", "Iowan Old Style", "Palatino", Georgia, serif;
+  --font-rounded: ui-rounded, "SF Pro Rounded", -apple-system, system-ui, sans-serif;
+  --color-paper: #f5f0e8;
+  --color-paper-2: #ece6db;
+  --color-card: #fbf9f5;
+  --color-night: #1d2024;
+  --color-ink: #3d3633;
+  --color-ink-2: rgb(61 54 51 / 0.72);
+  --color-ink-3: rgb(61 54 51 / 0.45);
+  --color-line: rgb(61 54 51 / 0.12);
+  --color-crane: #c94138;
+  --color-sun: #ffca2e;
+}
+
 :root {
-  font-family: ui-monospace, monospace;
-  color: #fafafa;
-  background: #0a0a0a;
+  color-scheme: light;
+  font-family: var(--font-sans);
+  color: var(--color-ink);
+  background: var(--color-paper);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--color-crane) 22%, transparent);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-crane);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+a {
+  text-decoration-color: var(--color-ink-3);
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+  transition: text-decoration-color 150ms ease-out, color 150ms ease-out;
+}
+
+a:hover {
+  text-decoration-color: currentColor;
+}
+
+.phone {
+  border-radius: 13% / 6%;
+  background: var(--color-night);
+  padding: 2.4%;
+  box-shadow:
+    0 1px 0 rgb(255 255 255 / 0.12) inset,
+    0 30px 60px -28px rgb(61 40 30 / 0.45),
+    0 12px 24px -16px rgb(61 40 30 / 0.3);
+}
+
+.phone img {
+  border-radius: 11.5% / 5.3%;
+}
+
+.loop path {
+  stroke-width: var(--loop-stroke, 5);
+}
+
+.loop-draw path {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: draw 2.4s cubic-bezier(0.55, 0.1, 0.3, 1) 0.2s forwards;
+}
+
+@keyframes draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.pause-wedge {
+  background: conic-gradient(transparent calc((1 - var(--fraction)) * 360deg), var(--color-ink) 0);
+  opacity: 0.85;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loop-draw path {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+}
+
+.prose-policy h1 {
+  font-family: var(--font-serif);
+  font-size: 2.25rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+.prose-policy h2 {
+  padding-top: 1.25rem;
+  font-family: var(--font-serif);
+  font-size: 1.25rem;
+  font-weight: 500;
+}
+
+.prose-policy p {
+  color: var(--color-ink-2);
+  line-height: 1.7;
+}
+
+.prose-policy a {
+  text-decoration: underline;
 }
