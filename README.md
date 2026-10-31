@@ -4,6 +4,8 @@
 
 Little While is a Pomodoro focus timer for iPhone. Set a focus block and a rest period, loop them as long as you like, follow the countdown from your Lock Screen, and see your focus time add up on a monthly calendar.
 
+Learn more at [littlewhile.app](https://littlewhile.app).
+
 ## Install
 
 <a href="https://apps.apple.com/us/app/little-while-pomodoro/id6811289278"><img src="https://toolbox.marketingtools.apple.com/api/v2/badges/download-on-the-app-store/black/en-us?releaseDate=1700000000" alt="Download on the App Store" height="40"></a>
