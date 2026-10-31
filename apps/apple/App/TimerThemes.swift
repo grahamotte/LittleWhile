@@ -39,6 +39,13 @@ enum TimerThemes {
             preview: AnyView(PaperCraneThemePreview()),
             screen: { AnyView(PaperCraneTimerView(snapshot: $0)) },
         ),
+        TimerTheme(
+            id: "graveyard",
+            name: "Graveyard",
+            colorScheme: .dark,
+            preview: AnyView(GraveyardThemePreview()),
+            screen: { AnyView(GraveyardTimerView(snapshot: $0)) },
+        ),
     ]
 
     static func resolve(_ id: String) -> TimerTheme {
