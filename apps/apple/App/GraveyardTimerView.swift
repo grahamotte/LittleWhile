@@ -2,31 +2,45 @@ import SwiftUI
 
 private enum GraveyardPalette {
     static let sky = [
-        Color(red: 0.04, green: 0.04, blue: 0.11),
-        Color(red: 0.11, green: 0.08, blue: 0.24),
-        Color(red: 0.24, green: 0.16, blue: 0.33),
+        Color(red: 0.01, green: 0.02, blue: 0.05),
+        Color(red: 0.05, green: 0.08, blue: 0.13),
+        Color(red: 0.14, green: 0.2, blue: 0.22),
     ]
     static let partySky = [
-        Color(red: 0.12, green: 0.03, blue: 0.2),
-        Color(red: 0.3, green: 0.08, blue: 0.38),
-        Color(red: 0.52, green: 0.2, blue: 0.32),
+        Color(red: 0.08, green: 0.02, blue: 0.13),
+        Color(red: 0.24, green: 0.06, blue: 0.3),
+        Color(red: 0.5, green: 0.2, blue: 0.12),
     ]
-    static let hills = Color(red: 0.07, green: 0.06, blue: 0.14)
-    static let ground = [Color(red: 0.1, green: 0.11, blue: 0.16), Color(red: 0.04, green: 0.05, blue: 0.08)]
-    static let grass = Color(red: 0.11, green: 0.16, blue: 0.17)
-    static let mound = Color(red: 0.07, green: 0.07, blue: 0.1)
-    static let moon = Color(red: 0.97, green: 0.94, blue: 0.8)
-    static let crater = Color(red: 0.84, green: 0.8, blue: 0.66)
-    static let stone = [Color(red: 0.58, green: 0.58, blue: 0.62), Color(red: 0.36, green: 0.36, blue: 0.42)]
-    static let stoneEdge = Color(red: 0.18, green: 0.18, blue: 0.24)
-    static let ghost = Color(red: 0.94, green: 0.97, blue: 1)
-    static let ghostShade = Color(red: 0.74, green: 0.82, blue: 0.92)
-    static let ghostGlow = Color(red: 0.6, green: 1, blue: 0.85)
-    static let face = Color(red: 0.08, green: 0.07, blue: 0.14)
-    static let pumpkin = Color(red: 0.93, green: 0.47, blue: 0.1)
-    static let pumpkinEdge = Color(red: 0.6, green: 0.25, blue: 0.05)
-    static let candle = Color(red: 1, green: 0.84, blue: 0.3)
-    static let ink = Color(red: 0.86, green: 0.92, blue: 0.95)
+    static let haze = Color(red: 0.4, green: 0.62, blue: 0.45)
+    static let hills = Color(red: 0.03, green: 0.04, blue: 0.06)
+    static let ground = [Color(red: 0.07, green: 0.09, blue: 0.1), Color(red: 0.02, green: 0.025, blue: 0.035)]
+    static let grass = Color(red: 0.08, green: 0.12, blue: 0.11)
+    static let mound = Color(red: 0.05, green: 0.05, blue: 0.06)
+    static let iron = Color(red: 0.11, green: 0.12, blue: 0.15)
+    static let cloud = Color(red: 0.07, green: 0.09, blue: 0.13)
+    static let moon = Color(red: 0.94, green: 0.95, blue: 0.86)
+    static let halo = Color(red: 0.72, green: 0.86, blue: 0.9)
+    static let crater = Color(red: 0.78, green: 0.8, blue: 0.72)
+    static let stone = [Color(red: 0.46, green: 0.49, blue: 0.51), Color(red: 0.22, green: 0.24, blue: 0.27)]
+    static let stoneEdge = Color(red: 0.1, green: 0.11, blue: 0.14)
+    static let moss = Color(red: 0.24, green: 0.36, blue: 0.2)
+    static let dirt = Color(red: 0.2, green: 0.15, blue: 0.11)
+    static let ghost = Color(red: 0.93, green: 0.98, blue: 1)
+    static let ghostShade = Color(red: 0.62, green: 0.84, blue: 0.86)
+    static let ghostGlow = Color(red: 0.5, green: 1, blue: 0.82)
+    static let fog = Color(red: 0.72, green: 0.86, blue: 0.84)
+    static let wisp = Color(red: 0.55, green: 1, blue: 0.7)
+    static let face = Color(red: 0.03, green: 0.04, blue: 0.07)
+    static let pumpkin = [Color(red: 1, green: 0.62, blue: 0.2), Color(red: 0.72, green: 0.3, blue: 0.04)]
+    static let pumpkinEdge = Color(red: 0.42, green: 0.16, blue: 0.03)
+    static let candle = Color(red: 1, green: 0.82, blue: 0.32)
+    static let ink = Color(red: 0.84, green: 0.94, blue: 0.93)
+    static let partyHues = [0.07, 0.78, 0.33, 0.12, 0.85]
+
+    static func party(_ index: Int, shift: Double = 0) -> Color {
+        let hue = partyHues[((index % partyHues.count) + partyHues.count) % partyHues.count] + shift
+        return Color(hue: hue - hue.rounded(.down), saturation: 0.85, brightness: 1)
+    }
 }
 
 struct GraveyardTimerView: View {
@@ -122,6 +136,7 @@ struct GraveyardThemePreview: View {
     }
 }
 
+
 private struct GraveyardNight: View {
     let layout: GraveyardLayout
     let scene: GraveyardScene
@@ -131,24 +146,31 @@ private struct GraveyardNight: View {
         Canvas { context, size in
             drawSky(in: context, size: size)
             drawMoon(in: context)
+            drawClouds(in: context, size: size)
             drawBats(in: context, size: size)
             drawHills(in: context, size: size)
             drawTree(in: context)
             drawGround(in: context, size: size)
+            drawFence(in: context, size: size)
 
             let ghosts = Dictionary(uniqueKeysWithValues: scene.ghosts.map { ($0.grave, $0) })
-            for (index, grave) in layout.graves.enumerated() {
-                drawGrave(grave, tremble: scene.trembles[index], in: context)
-                if let pose = ghosts[index] {
-                    drawGhost(pose, grave: grave, in: context)
+            for row in GraveyardLayout.rows.indices {
+                for (index, grave) in layout.graves.enumerated() where grave.row == row {
+                    drawGrave(grave, index: index, tremble: scene.trembles[index], in: context)
+                    if let pose = ghosts[index] {
+                        drawGhost(pose, grave: grave, in: context)
+                    }
                 }
+                drawFog(in: context, size: size, depth: layout.graves.first { $0.row == row }?.ground.y ?? layout.horizon, layer: row)
             }
 
             drawPumpkins(in: context, size: size)
-            drawFog(in: context, size: size)
+            drawWisps(in: context, size: size)
+            drawFog(in: context, size: size, depth: size.height * 0.97, layer: 3)
             if scene.party > 0 {
                 drawParty(in: context, size: size, ghosts: scene.ghosts)
             }
+            drawVignette(in: context, size: size)
         }
     }
 
@@ -161,53 +183,56 @@ private struct GraveyardNight: View {
             party.opacity = scene.party * 0.85
             party.fill(sky, with: .linearGradient(Gradient(colors: GraveyardPalette.partySky), startPoint: .zero, endPoint: end))
         }
+        context.fill(
+            Path(CGRect(x: 0, y: layout.horizon - size.height * 0.16, width: size.width, height: size.height * 0.2)),
+            with: .linearGradient(
+                Gradient(colors: [GraveyardPalette.haze.opacity(0), GraveyardPalette.haze.opacity(0.16 * (1 - scene.party))]),
+                startPoint: CGPoint(x: 0, y: layout.horizon - size.height * 0.16),
+                endPoint: CGPoint(x: 0, y: layout.horizon),
+            ),
+        )
 
         var stars = Path()
-        for index in 0..<46 {
+        for index in 0..<56 {
             let twinkle = 0.5 + 0.5 * sin(time * 1.6 + Double(index) * 2.3)
-            let radius = 0.5 + 1.1 * CGFloat(Self.noise(index, 3.1)) * CGFloat(0.5 + 0.5 * twinkle)
+            let radius = 0.4 + 1 * CGFloat(Self.noise(index, 3.1)) * CGFloat(0.4 + 0.6 * twinkle)
             let center = CGPoint(
                 x: CGFloat(Self.noise(index, 12.9898)) * size.width,
-                y: CGFloat(Self.noise(index, 78.233)) * layout.horizon * 0.9,
+                y: CGFloat(Self.noise(index, 78.233)) * layout.horizon * 0.85,
             )
             stars.addEllipse(in: CGRect(x: center.x - radius, y: center.y - radius, width: radius * 2, height: radius * 2))
         }
-        context.fill(stars, with: .color(.white.opacity(0.75)))
+        context.fill(stars, with: .color(.white.opacity(0.7)))
     }
 
     private func drawMoon(in context: GraphicsContext) {
         let center = layout.moonCenter
         let radius = layout.moonRadius
-        let glow = radius * 3
-        let hue = Color(hue: (time * 0.08).truncatingRemainder(dividingBy: 1), saturation: 0.6, brightness: 1)
-        context.fill(
-            Path(ellipseIn: CGRect(x: center.x - glow, y: center.y - glow, width: glow * 2, height: glow * 2)),
-            with: .radialGradient(
-                Gradient(colors: [GraveyardPalette.moon.opacity(0.35), GraveyardPalette.moon.opacity(0)]),
-                center: center,
-                startRadius: radius * 0.8,
-                endRadius: glow,
-            ),
-        )
+        let glow = radius * 3.6
+        let halo = Path(ellipseIn: CGRect(x: center.x - glow, y: center.y - glow, width: glow * 2, height: glow * 2))
+        context.fill(halo, with: .radialGradient(
+            Gradient(colors: [GraveyardPalette.halo.opacity(0.42), GraveyardPalette.halo.opacity(0.1), GraveyardPalette.halo.opacity(0)]),
+            center: center,
+            startRadius: radius * 0.9,
+            endRadius: glow,
+        ))
         if scene.party > 0 {
             var party = context
-            party.opacity = scene.party * 0.5
-            party.fill(
-                Path(ellipseIn: CGRect(x: center.x - glow, y: center.y - glow, width: glow * 2, height: glow * 2)),
-                with: .radialGradient(Gradient(colors: [hue, hue.opacity(0)]), center: center, startRadius: radius, endRadius: glow),
-            )
+            party.opacity = scene.party * 0.55
+            let hue = GraveyardPalette.party(Int(time / 2), shift: 0)
+            party.fill(halo, with: .radialGradient(Gradient(colors: [hue, hue.opacity(0)]), center: center, startRadius: radius, endRadius: glow))
         }
         context.fill(
             Path(ellipseIn: CGRect(x: center.x - radius, y: center.y - radius, width: radius * 2, height: radius * 2)),
             with: .radialGradient(
-                Gradient(colors: [.white, GraveyardPalette.moon]),
-                center: CGPoint(x: center.x - radius * 0.3, y: center.y - radius * 0.3),
+                Gradient(colors: [.white, GraveyardPalette.moon, GraveyardPalette.crater]),
+                center: CGPoint(x: center.x - radius * 0.35, y: center.y - radius * 0.35),
                 startRadius: 0,
-                endRadius: radius * 1.3,
+                endRadius: radius * 1.6,
             ),
         )
         var craters = Path()
-        for (dx, dy, size) in [(-0.35, -0.1, 0.22), (0.25, 0.3, 0.16), (0.3, -0.35, 0.12), (-0.1, 0.45, 0.1)] {
+        for (dx, dy, size) in [(-0.35, -0.1, 0.22), (0.25, 0.3, 0.16), (0.3, -0.35, 0.12), (-0.1, 0.45, 0.1), (0.05, -0.02, 0.07)] {
             let crater = radius * CGFloat(size)
             craters.addEllipse(in: CGRect(
                 x: center.x + radius * CGFloat(dx) - crater,
@@ -216,17 +241,35 @@ private struct GraveyardNight: View {
                 height: crater * 2,
             ))
         }
-        context.fill(craters, with: .color(GraveyardPalette.crater.opacity(0.6)))
+        context.fill(craters, with: .color(GraveyardPalette.crater.opacity(0.55)))
+    }
 
-        for index in 0..<3 {
-            let width = radius * CGFloat(2.4 + Double(index) * 0.5)
-            let span = layout.size.width + width * 2
-            let x = (CGFloat(time * (6 + Double(index) * 3)) + span * CGFloat(Self.noise(index, 7.7))).truncatingRemainder(dividingBy: span) - width
-            let y = center.y + radius * CGFloat(Double(index) * 0.7 - 0.5)
-            context.fill(
-                Path(ellipseIn: CGRect(x: x, y: y, width: width, height: radius * 0.32)),
-                with: .color(GraveyardPalette.hills.opacity(0.55)),
-            )
+    private func drawClouds(in context: GraphicsContext, size: CGSize) {
+        let radius = layout.moonRadius
+        for index in 0..<4 {
+            let width = radius * CGFloat(3 + Self.noise(index, 2.2) * 2)
+            let span = size.width + width * 2
+            let x = (CGFloat(time * (3 + Double(index) * 2)) + span * CGFloat(Self.noise(index, 7.7))).truncatingRemainder(dividingBy: span) - width
+            let y = layout.moonCenter.y + radius * CGFloat(Double(index) * 0.9 - 1.6)
+            for puff in 0..<7 {
+                let reach = width * CGFloat(0.16 + 0.1 * Self.noise(index * 7 + puff, 4.1))
+                let center = CGPoint(
+                    x: x + width * CGFloat(puff) / 6,
+                    y: y + radius * CGFloat(0.3 * Self.noise(index * 7 + puff, 6.6) - 0.15),
+                )
+                var puffContext = context
+                puffContext.scaleBy(x: 1, y: 0.32)
+                let scaled = CGPoint(x: center.x, y: center.y / 0.32)
+                puffContext.fill(
+                    Path(ellipseIn: CGRect(x: scaled.x - reach, y: scaled.y - reach, width: reach * 2, height: reach * 2)),
+                    with: .radialGradient(
+                        Gradient(colors: [GraveyardPalette.cloud.opacity(0.7), GraveyardPalette.cloud.opacity(0.35), GraveyardPalette.cloud.opacity(0)]),
+                        center: scaled,
+                        startRadius: 0,
+                        endRadius: reach,
+                    ),
+                )
+            }
         }
     }
 
@@ -270,29 +313,58 @@ private struct GraveyardNight: View {
 
     private func drawTree(in context: GraphicsContext) {
         let base = CGPoint(x: layout.size.width * 0.12, y: layout.hillY(at: layout.size.width * 0.12) + 4)
-        var branches = Path()
+        let height = layout.size.height * 0.12
+        let depths = 6
+        var levels = Array(repeating: Path(), count: depths + 1)
+        var perch = base
         func branch(from start: CGPoint, angle: Double, length: CGFloat, depth: Int) {
-            let sway = 0.03 * sin(time * 0.8 + Double(depth))
+            let sway = 0.025 * sin(time * 0.7 + Double(depth)) * Double(depths - depth)
+            let bend = 0.25 * (Self.noise(depth * 7 + Int(length), 3.3) - 0.5)
             let end = CGPoint(x: start.x + CGFloat(cos(angle + sway)) * length, y: start.y + CGFloat(sin(angle + sway)) * length)
-            branches.move(to: start)
-            branches.addLine(to: end)
+            let middle = CGPoint(
+                x: (start.x + end.x) / 2 + CGFloat(cos(angle + .pi / 2)) * length * CGFloat(bend),
+                y: (start.y + end.y) / 2 + CGFloat(sin(angle + .pi / 2)) * length * CGFloat(bend),
+            )
+            levels[depth].move(to: start)
+            levels[depth].addQuadCurve(to: end, control: middle)
+            if depth == 3 && end.x > perch.x {
+                perch = end
+            }
             guard depth > 0 else { return }
-            branch(from: end, angle: angle - 0.45 - 0.1 * Double(depth % 2), length: length * 0.72, depth: depth - 1)
-            branch(from: end, angle: angle + 0.4 + 0.12 * Double(depth % 3), length: length * 0.66, depth: depth - 1)
+            branch(from: end, angle: angle - 0.5 - 0.12 * Double(depth % 2), length: length * 0.7, depth: depth - 1)
+            branch(from: end, angle: angle + 0.42 + 0.14 * Double(depth % 3), length: length * 0.64, depth: depth - 1)
         }
-        let height = layout.size.height * 0.11
-        branch(from: base, angle: -.pi / 2 + 0.08, length: height, depth: 5)
-        context.stroke(
-            branches,
-            with: .color(GraveyardPalette.hills),
-            style: StrokeStyle(lineWidth: max(1, height * 0.04), lineCap: .round),
-        )
-        var trunk = Path()
-        trunk.move(to: CGPoint(x: base.x - height * 0.07, y: base.y))
-        trunk.addLine(to: CGPoint(x: base.x + height * 0.04, y: base.y - height))
-        trunk.addLine(to: CGPoint(x: base.x + height * 0.11, y: base.y))
-        trunk.closeSubpath()
-        context.fill(trunk, with: .color(GraveyardPalette.hills))
+        branch(from: base, angle: -.pi / 2 + 0.1, length: height, depth: depths)
+        for (depth, path) in levels.enumerated() {
+            context.stroke(
+                path,
+                with: .color(GraveyardPalette.hills),
+                style: StrokeStyle(lineWidth: max(0.8, height * 0.07 * CGFloat(depth + 1) / CGFloat(depths + 1)), lineCap: .round),
+            )
+        }
+
+        let crow = height * 0.13
+        var local = context
+        local.translateBy(x: perch.x, y: perch.y - crow * 0.35)
+        var body = Path(ellipseIn: CGRect(x: -crow * 0.5, y: -crow * 0.35, width: crow, height: crow * 0.62))
+        body.addEllipse(in: CGRect(x: crow * 0.22, y: -crow * 0.62, width: crow * 0.42, height: crow * 0.4))
+        body.move(to: CGPoint(x: crow * 0.6, y: -crow * 0.48))
+        body.addLine(to: CGPoint(x: crow * 0.88, y: -crow * 0.38))
+        body.addLine(to: CGPoint(x: crow * 0.58, y: -crow * 0.34))
+        body.closeSubpath()
+        body.move(to: CGPoint(x: -crow * 0.4, y: -crow * 0.05))
+        body.addLine(to: CGPoint(x: -crow * 0.95, y: crow * 0.25))
+        body.addLine(to: CGPoint(x: -crow * 0.3, y: crow * 0.2))
+        body.closeSubpath()
+        local.fill(body, with: .color(GraveyardPalette.face))
+        let blink = (time + 1.7).truncatingRemainder(dividingBy: 5.3) < 0.18
+        if !blink {
+            let eye = max(0.6, crow * 0.06)
+            local.fill(
+                Path(ellipseIn: CGRect(x: crow * 0.46 - eye, y: -crow * 0.47 - eye, width: eye * 2, height: eye * 2)),
+                with: .color(GraveyardPalette.candle),
+            )
+        }
     }
 
     private func drawGround(in context: GraphicsContext, size: CGSize) {
@@ -310,13 +382,59 @@ private struct GraveyardNight: View {
             startPoint: CGPoint(x: 0, y: top),
             endPoint: CGPoint(x: 0, y: size.height),
         ))
+        let pool = layout.moonRadius * 4
+        let light = CGPoint(x: layout.moonCenter.x - layout.moonRadius, y: top + size.height * 0.08)
+        context.fill(
+            Path(ellipseIn: CGRect(x: light.x - pool * 1.4, y: light.y - pool * 0.4, width: pool * 2.8, height: pool * 0.8)),
+            with: .radialGradient(
+                Gradient(colors: [GraveyardPalette.halo.opacity(0.07), GraveyardPalette.halo.opacity(0)]),
+                center: light,
+                startRadius: 0,
+                endRadius: pool * 1.4,
+            ),
+        )
     }
 
-    private func drawGrave(_ grave: GraveyardGrave, tremble: Double, in context: GraphicsContext) {
+    private func drawFence(in context: GraphicsContext, size: CGSize) {
+        let base = layout.horizon + size.height * 0.035
+        let height = size.height * 0.05
+        let spacing = max(4, layout.stoneWidth * 0.2)
+        var fence = Path()
+        var x = spacing / 2
+        while x < size.width {
+            let lean = CGFloat(Self.noise(Int(x), 1.3) - 0.5) * spacing * 0.3
+            let top = base - height * CGFloat(0.85 + 0.15 * Self.noise(Int(x), 5.7))
+            fence.move(to: CGPoint(x: x, y: base))
+            fence.addLine(to: CGPoint(x: x + lean, y: top))
+            fence.move(to: CGPoint(x: x + lean - spacing * 0.12, y: top + spacing * 0.1))
+            fence.addLine(to: CGPoint(x: x + lean, y: top - spacing * 0.3))
+            fence.addLine(to: CGPoint(x: x + lean + spacing * 0.12, y: top + spacing * 0.1))
+            x += spacing
+        }
+        for rail in [0.25, 0.75] {
+            fence.move(to: CGPoint(x: 0, y: base - height * CGFloat(rail)))
+            fence.addLine(to: CGPoint(x: size.width, y: base - height * CGFloat(rail) + size.height * 0.004))
+        }
+        context.stroke(fence, with: .color(GraveyardPalette.iron), style: StrokeStyle(lineWidth: max(0.8, spacing * 0.1), lineCap: .round, lineJoin: .round))
+    }
+
+    private func drawGrave(_ grave: GraveyardGrave, index: Int, tremble: Double, in context: GraphicsContext) {
         let stone = layout.stoneSize(grave)
         let ground = grave.ground
+        var shadow = Path()
+        let cast = CGVector(dx: -stone.height * 0.55, dy: stone.width * 0.18)
+        shadow.move(to: CGPoint(x: ground.x - stone.width * 0.5, y: ground.y))
+        shadow.addLine(to: CGPoint(x: ground.x + stone.width * 0.5, y: ground.y))
+        shadow.addLine(to: CGPoint(x: ground.x + stone.width * 0.3 + cast.dx, y: ground.y + cast.dy))
+        shadow.addLine(to: CGPoint(x: ground.x - stone.width * 0.7 + cast.dx, y: ground.y + cast.dy))
+        shadow.closeSubpath()
+        context.fill(shadow, with: .color(.black.opacity(0.35)))
         let mound = CGRect(x: ground.x - stone.width * 0.62, y: ground.y - stone.width * 0.04, width: stone.width * 1.24, height: stone.width * 0.36)
-        context.fill(Path(ellipseIn: mound), with: .color(GraveyardPalette.mound))
+        context.fill(Path(ellipseIn: mound), with: .linearGradient(
+            Gradient(colors: [GraveyardPalette.dirt.opacity(0.7), GraveyardPalette.mound]),
+            startPoint: CGPoint(x: mound.midX, y: mound.minY),
+            endPoint: CGPoint(x: mound.midX, y: mound.maxY),
+        ))
 
         var local = context
         local.translateBy(x: ground.x, y: ground.y)
@@ -325,26 +443,56 @@ private struct GraveyardNight: View {
         let shape = GraveyardTombstone(style: grave.style).path(in: rect)
         local.fill(shape, with: .linearGradient(
             Gradient(colors: GraveyardPalette.stone),
-            startPoint: CGPoint(x: rect.minX, y: rect.minY),
-            endPoint: CGPoint(x: rect.maxX, y: rect.maxY),
+            startPoint: CGPoint(x: rect.maxX, y: rect.minY),
+            endPoint: CGPoint(x: rect.minX, y: rect.maxY),
         ))
+        var weathered = local
+        weathered.clip(to: shape)
+        weathered.fill(Path(rect), with: .linearGradient(
+            Gradient(colors: [GraveyardPalette.moss.opacity(0.4), GraveyardPalette.moss.opacity(0)]),
+            startPoint: CGPoint(x: 0, y: rect.maxY),
+            endPoint: CGPoint(x: 0, y: rect.maxY - stone.height * 0.28),
+        ))
+        var speckles = Path()
+        for speck in 0..<10 {
+            let dot = stone.width * CGFloat(0.015 + 0.025 * Self.noise(index * 10 + speck, 2.9))
+            speckles.addEllipse(in: CGRect(
+                x: rect.minX + rect.width * CGFloat(Self.noise(index * 10 + speck, 6.3)) - dot,
+                y: rect.minY + rect.height * CGFloat(Self.noise(index * 10 + speck, 8.7)) - dot,
+                width: dot * 2,
+                height: dot * 2,
+            ))
+        }
+        weathered.fill(speckles, with: .color(GraveyardPalette.stoneEdge.opacity(0.35)))
+        if index % 3 == 1 {
+            var crack = Path()
+            crack.move(to: CGPoint(x: rect.minX + rect.width * 0.62, y: rect.minY + rect.height * 0.05))
+            crack.addLine(to: CGPoint(x: rect.minX + rect.width * 0.52, y: rect.minY + rect.height * 0.22))
+            crack.addLine(to: CGPoint(x: rect.minX + rect.width * 0.6, y: rect.minY + rect.height * 0.34))
+            crack.addLine(to: CGPoint(x: rect.minX + rect.width * 0.46, y: rect.minY + rect.height * 0.5))
+            weathered.stroke(crack, with: .color(GraveyardPalette.stoneEdge), lineWidth: max(0.6, stone.width * 0.025))
+        }
         local.stroke(shape, with: .color(GraveyardPalette.stoneEdge), lineWidth: max(0.6, stone.width * 0.03))
+        local.stroke(shape, with: .linearGradient(
+            Gradient(colors: [GraveyardPalette.halo.opacity(0.55), GraveyardPalette.halo.opacity(0)]),
+            startPoint: CGPoint(x: rect.maxX, y: rect.minY),
+            endPoint: CGPoint(x: rect.midX, y: rect.midY),
+        ), lineWidth: max(0.6, stone.width * 0.025))
         if grave.style != .cross {
-            local.draw(
-                Text("RIP")
-                    .font(.system(size: stone.width * 0.22, weight: .bold, design: .serif))
-                    .foregroundStyle(GraveyardPalette.stoneEdge.opacity(0.8)),
-                at: CGPoint(x: 0, y: -stone.height * 0.55),
-            )
+            let engraving = CGPoint(x: 0, y: -stone.height * 0.55)
+            let font = Font.system(size: stone.width * 0.2, weight: .semibold, design: .serif)
+            local.draw(Text("RIP").font(font).foregroundStyle(GraveyardPalette.halo.opacity(0.18)), at: CGPoint(x: engraving.x, y: engraving.y + 0.8))
+            local.draw(Text("RIP").font(font).foregroundStyle(GraveyardPalette.stoneEdge.opacity(0.85)), at: engraving)
         }
 
         var grass = Path()
-        for index in 0..<5 {
-            let x = ground.x + stone.width * (CGFloat(index) / 4 - 0.5) * 1.1
-            let height = stone.width * (0.12 + 0.1 * CGFloat(Self.noise(index + Int(ground.x), 9.1)))
-            grass.move(to: CGPoint(x: x - 1.5, y: ground.y + 2))
-            grass.addLine(to: CGPoint(x: x + height * 0.2, y: ground.y - height))
-            grass.addLine(to: CGPoint(x: x + 1.5, y: ground.y + 2))
+        for blade in 0..<9 {
+            let x = ground.x + stone.width * (CGFloat(blade) / 8 - 0.5) * 1.3
+            let height = stone.width * (0.08 + 0.16 * CGFloat(Self.noise(index * 9 + blade, 9.1)))
+            let lean = height * CGFloat(Self.noise(index * 9 + blade, 4.7) - 0.5) + height * 0.1 * CGFloat(sin(time * 1.1 + Double(blade)))
+            grass.move(to: CGPoint(x: x - 1.2, y: ground.y + 3))
+            grass.addQuadCurve(to: CGPoint(x: x + lean, y: ground.y - height), control: CGPoint(x: x, y: ground.y - height * 0.5))
+            grass.addQuadCurve(to: CGPoint(x: x + 1.2, y: ground.y + 3), control: CGPoint(x: x + 0.6, y: ground.y - height * 0.4))
             grass.closeSubpath()
         }
         context.fill(grass, with: .color(GraveyardPalette.grass))
@@ -355,14 +503,17 @@ private struct GraveyardNight: View {
         let emergence = layout.emergence(grave)
         let bottom = emergence.y + size.height - CGFloat(pose.rise) * size.height * 1.15 + pose.offset.dy
         let center = CGPoint(x: emergence.x + pose.offset.dx, y: bottom - size.height / 2)
+        let presence = min(1, max(0, pose.rise))
+
+        drawDisturbance(pose, at: emergence, size: size, in: context)
 
         var clipped = context
         clipped.clip(to: Path(CGRect(x: 0, y: 0, width: layout.size.width, height: emergence.y)))
-        let glow = size.height * 0.9
+        let glow = size.height * 1.1
         clipped.fill(
             Path(ellipseIn: CGRect(x: center.x - glow, y: center.y - glow, width: glow * 2, height: glow * 2)),
             with: .radialGradient(
-                Gradient(colors: [GraveyardPalette.ghostGlow.opacity(0.28 * min(1, pose.rise)), GraveyardPalette.ghostGlow.opacity(0)]),
+                Gradient(colors: [GraveyardPalette.ghostGlow.opacity(0.32 * presence), GraveyardPalette.ghostGlow.opacity(0.08 * presence), GraveyardPalette.ghostGlow.opacity(0)]),
                 center: center,
                 startRadius: 0,
                 endRadius: glow,
@@ -373,111 +524,208 @@ private struct GraveyardNight: View {
         local.translateBy(x: center.x, y: center.y)
         local.rotate(by: .radians(pose.tilt))
         local.scaleBy(x: CGFloat(abs(pose.facing) < 0.15 ? 0.15 : pose.facing), y: 1)
-        local.opacity = 0.92
+        local.opacity = 0.9
 
         let rect = CGRect(x: -size.width / 2, y: -size.height / 2, width: size.width, height: size.height)
-        let armLength = size.width * 0.32
+        let armLength = size.width * 0.34
+        var arms = Path()
         for side in [-1.0, 1.0] {
-            let shoulder = CGPoint(x: rect.midX + CGFloat(side) * size.width * 0.36, y: rect.minY + size.height * 0.48)
+            let shoulder = CGPoint(x: rect.midX + CGFloat(side) * size.width * 0.3, y: rect.minY + size.height * 0.46)
             let angle = side > 0 ? 0.9 - pose.arms * 1.9 : .pi - 0.9 + pose.arms * 1.9
-            var arm = Path()
-            arm.move(to: shoulder)
-            arm.addLine(to: CGPoint(x: shoulder.x + CGFloat(cos(angle)) * armLength, y: shoulder.y + CGFloat(sin(angle)) * armLength))
-            local.stroke(arm, with: .color(GraveyardPalette.ghost), style: StrokeStyle(lineWidth: size.width * 0.16, lineCap: .round))
+            let hand = CGPoint(x: shoulder.x + CGFloat(cos(angle)) * armLength, y: shoulder.y + CGFloat(sin(angle)) * armLength)
+            let droop = CGPoint(
+                x: (shoulder.x + hand.x) / 2 + CGFloat(side) * armLength * 0.1,
+                y: (shoulder.y + hand.y) / 2 + armLength * 0.25,
+            )
+            arms.move(to: shoulder)
+            arms.addQuadCurve(to: hand, control: droop)
         }
+        local.stroke(arms, with: .color(GraveyardPalette.ghost.opacity(0.92)), style: StrokeStyle(lineWidth: size.width * 0.14, lineCap: .round))
 
-        let body = GraveyardGhost(wave: time * 5 + Double(grave.ground.x)).path(in: rect)
+        let body = GraveyardGhost(wave: time * 4 + Double(grave.ground.x)).path(in: rect)
         local.fill(body, with: .linearGradient(
-            Gradient(colors: [GraveyardPalette.ghost, GraveyardPalette.ghost, GraveyardPalette.ghostShade]),
+            Gradient(colors: [GraveyardPalette.ghost, GraveyardPalette.ghost, GraveyardPalette.ghostShade.opacity(0.7), GraveyardPalette.ghostShade.opacity(0)]),
             startPoint: CGPoint(x: 0, y: rect.minY),
             endPoint: CGPoint(x: 0, y: rect.maxY),
         ))
         if scene.party > 0 {
             var tint = local
-            tint.opacity = scene.party * 0.25
-            tint.fill(body, with: .color(Color(hue: (time * 0.3 + Double(pose.grave) * 0.13).truncatingRemainder(dividingBy: 1), saturation: 0.7, brightness: 1)))
+            tint.opacity = scene.party * 0.3
+            tint.fill(body, with: .linearGradient(
+                Gradient(colors: [GraveyardPalette.party(pose.grave, shift: time * 0.05), GraveyardPalette.party(pose.grave, shift: time * 0.05).opacity(0)]),
+                startPoint: CGPoint(x: 0, y: rect.minY),
+                endPoint: CGPoint(x: 0, y: rect.maxY),
+            ))
         }
 
-        let eye = size.width * 0.11
+        let eye = size.width * 0.12
         let blink = (time + Double(pose.grave) * 1.3).truncatingRemainder(dividingBy: 4 + Double(pose.grave % 3)) < 0.15 ? 0.15 : 1
         var face = Path()
         for side in [-1.0, 1.0] {
-            face.addEllipse(in: CGRect(
-                x: rect.midX + CGFloat(side) * size.width * 0.17 - eye / 2,
-                y: rect.minY + size.height * 0.3 - eye * 0.7 * CGFloat(blink),
-                width: eye,
-                height: eye * 1.4 * CGFloat(blink),
-            ))
+            let eyeCenter = CGPoint(x: rect.midX + CGFloat(side) * size.width * 0.16, y: rect.minY + size.height * 0.3)
+            var socket = Path(ellipseIn: CGRect(x: -eye / 2, y: -eye * 0.75 * CGFloat(blink), width: eye, height: eye * 1.5 * CGFloat(blink)))
+            socket = socket.applying(CGAffineTransform(rotationAngle: CGFloat(side) * -0.25).concatenating(CGAffineTransform(translationX: eyeCenter.x, y: eyeCenter.y)))
+            face.addPath(socket)
         }
-        let mouthTop = rect.minY + size.height * 0.48
+        let mouthTop = rect.minY + size.height * 0.45
         if scene.party > 0.5 {
             face.move(to: CGPoint(x: rect.midX - eye, y: mouthTop))
             face.addQuadCurve(to: CGPoint(x: rect.midX + eye, y: mouthTop), control: CGPoint(x: rect.midX, y: mouthTop + eye * 2.2))
             face.closeSubpath()
         } else {
-            let mouth = eye * CGFloat(0.8 + 0.6 * pose.arms)
-            face.addEllipse(in: CGRect(x: rect.midX - mouth / 2, y: mouthTop, width: mouth, height: mouth * 1.3))
+            let mouth = eye * CGFloat(0.7 + 0.5 * pose.arms)
+            face.addEllipse(in: CGRect(x: rect.midX - mouth / 2, y: mouthTop, width: mouth, height: mouth * (1.3 + CGFloat(pose.arms) * 0.8)))
         }
         local.fill(face, with: .color(GraveyardPalette.face))
+        if scene.party <= 0.5 {
+            var gleam = Path()
+            for side in [-1.0, 1.0] {
+                let dot = eye * 0.16
+                gleam.addEllipse(in: CGRect(
+                    x: rect.midX + CGFloat(side) * size.width * 0.16 - dot,
+                    y: rect.minY + size.height * 0.3 - dot * CGFloat(blink),
+                    width: dot * 2,
+                    height: dot * 2 * CGFloat(blink),
+                ))
+            }
+            local.fill(gleam, with: .color(GraveyardPalette.ghostGlow.opacity(0.9)))
+        }
+    }
+
+    private func drawDisturbance(_ pose: GraveyardGhostPose, at emergence: CGPoint, size: CGSize, in context: GraphicsContext) {
+        let lasting: TimeInterval = 1.6
+        guard pose.age > 0, pose.age < lasting else { return }
+        let fade = 1 - pose.age / lasting
+        let spread = size.width * CGFloat(0.4 + pose.age * 0.5)
+        context.fill(
+            Path(ellipseIn: CGRect(x: emergence.x - spread, y: emergence.y - spread * 0.35, width: spread * 2, height: spread * 0.6)),
+            with: .radialGradient(
+                Gradient(colors: [GraveyardPalette.fog.opacity(0.4 * fade), GraveyardPalette.fog.opacity(0)]),
+                center: emergence,
+                startRadius: 0,
+                endRadius: spread,
+            ),
+        )
+        var clods = Path()
+        for clod in 0..<7 {
+            let direction = (Self.noise(clod + pose.grave * 7, 3.7) - 0.5) * 2.4
+            let speed = 1.6 + Self.noise(clod + pose.grave * 7, 9.2) * 1.4
+            let t = pose.age
+            let point = CGPoint(
+                x: emergence.x + size.width * CGFloat(direction * t * 0.9),
+                y: emergence.y - size.height * CGFloat(speed * t - 3.2 * t * t),
+            )
+            guard point.y <= emergence.y + 2 else { continue }
+            let radius = size.width * CGFloat(0.025 + 0.025 * Self.noise(clod, 5.5))
+            clods.addEllipse(in: CGRect(x: point.x - radius, y: point.y - radius, width: radius * 2, height: radius * 2))
+        }
+        context.fill(clods, with: .color(GraveyardPalette.dirt.opacity(fade)))
     }
 
     private func drawPumpkins(in context: GraphicsContext, size: CGSize) {
-        let radius = layout.stoneWidth * 0.34
-        for (x, flickerPhase) in [(0.07, 0.0), (0.5, 2.1), (0.93, 4.3)] {
-            let center = CGPoint(x: size.width * CGFloat(x), y: size.height * 0.955)
-            let flicker = 0.75 + 0.15 * sin(time * 9 + flickerPhase) + 0.1 * sin(time * 23 + flickerPhase)
-            let glow = radius * 2.6
+        for (x, y, scale, phase) in [(0.1, 0.955, 1.1, 0.0), (0.9, 0.945, 0.85, 2.1)] {
+            let radius = layout.stoneWidth * 0.34 * CGFloat(scale)
+            let center = CGPoint(x: size.width * CGFloat(x), y: size.height * CGFloat(y))
+            let flicker = 0.72 + 0.16 * sin(time * 9 + phase) + 0.12 * sin(time * 23 + phase)
+            let glow = radius * 3.2
             context.fill(
                 Path(ellipseIn: CGRect(x: center.x - glow, y: center.y - glow, width: glow * 2, height: glow * 2)),
                 with: .radialGradient(
-                    Gradient(colors: [GraveyardPalette.candle.opacity(0.3 * flicker), GraveyardPalette.candle.opacity(0)]),
+                    Gradient(colors: [GraveyardPalette.candle.opacity(0.28 * flicker), GraveyardPalette.pumpkin[1].opacity(0.1 * flicker), GraveyardPalette.candle.opacity(0)]),
                     center: center,
                     startRadius: 0,
                     endRadius: glow,
                 ),
             )
             var stem = Path()
-            stem.addRoundedRect(in: CGRect(x: center.x - radius * 0.1, y: center.y - radius * 1.05, width: radius * 0.2, height: radius * 0.35), cornerSize: CGSize(width: radius * 0.05, height: radius * 0.05))
-            context.fill(stem, with: .color(GraveyardPalette.grass))
-            for lobe in [-0.45, 0.45, 0] {
-                let lobeRect = CGRect(x: center.x + radius * CGFloat(lobe) - radius * 0.65, y: center.y - radius * 0.8, width: radius * 1.3, height: radius * 1.6)
-                context.fill(Path(ellipseIn: lobeRect), with: .color(GraveyardPalette.pumpkin))
-                context.stroke(Path(ellipseIn: lobeRect), with: .color(GraveyardPalette.pumpkinEdge), lineWidth: max(0.5, radius * 0.05))
+            stem.move(to: CGPoint(x: center.x - radius * 0.08, y: center.y - radius * 0.7))
+            stem.addQuadCurve(to: CGPoint(x: center.x + radius * 0.22, y: center.y - radius * 1.12), control: CGPoint(x: center.x - radius * 0.06, y: center.y - radius * 1.05))
+            context.stroke(stem, with: .color(GraveyardPalette.grass), style: StrokeStyle(lineWidth: radius * 0.16, lineCap: .round))
+            for lobe in [-0.5, 0.5, -0.2, 0.2, 0] {
+                let lobeRect = CGRect(x: center.x + radius * CGFloat(lobe) - radius * 0.62, y: center.y - radius * 0.78, width: radius * 1.24, height: radius * 1.56)
+                context.fill(Path(ellipseIn: lobeRect), with: .radialGradient(
+                    Gradient(colors: GraveyardPalette.pumpkin),
+                    center: CGPoint(x: lobeRect.midX - radius * 0.15, y: lobeRect.midY - radius * 0.3),
+                    startRadius: 0,
+                    endRadius: radius * 1.1,
+                ))
+                context.stroke(Path(ellipseIn: lobeRect), with: .color(GraveyardPalette.pumpkinEdge.opacity(0.7)), lineWidth: max(0.5, radius * 0.04))
             }
             var carving = Path()
             for side in [-1.0, 1.0] {
-                let eye = CGPoint(x: center.x + radius * CGFloat(side) * 0.4, y: center.y - radius * 0.2)
-                carving.move(to: CGPoint(x: eye.x, y: eye.y - radius * 0.2))
+                let eye = CGPoint(x: center.x + radius * CGFloat(side) * 0.38, y: center.y - radius * 0.2)
+                carving.move(to: CGPoint(x: eye.x + radius * CGFloat(side) * 0.12, y: eye.y - radius * 0.2))
                 carving.addLine(to: CGPoint(x: eye.x + radius * 0.18, y: eye.y + radius * 0.1))
                 carving.addLine(to: CGPoint(x: eye.x - radius * 0.18, y: eye.y + radius * 0.1))
                 carving.closeSubpath()
             }
-            carving.move(to: CGPoint(x: center.x - radius * 0.55, y: center.y + radius * 0.2))
-            for step in 1...6 {
-                let x = center.x - radius * 0.55 + radius * 1.1 * CGFloat(step) / 6
-                carving.addLine(to: CGPoint(x: x, y: center.y + radius * (step.isMultiple(of: 2) ? 0.2 : 0.32)))
-            }
-            carving.addQuadCurve(to: CGPoint(x: center.x - radius * 0.55, y: center.y + radius * 0.2), control: CGPoint(x: center.x, y: center.y + radius * 0.75))
+            carving.move(to: CGPoint(x: center.x - radius * 0.06, y: center.y + radius * 0.02))
+            carving.addLine(to: CGPoint(x: center.x + radius * 0.06, y: center.y + radius * 0.02))
+            carving.addLine(to: CGPoint(x: center.x, y: center.y - radius * 0.1))
             carving.closeSubpath()
-            context.fill(carving, with: .color(GraveyardPalette.candle.opacity(flicker)))
+            carving.move(to: CGPoint(x: center.x - radius * 0.58, y: center.y + radius * 0.16))
+            for step in 1...8 {
+                let x = center.x - radius * 0.58 + radius * 1.16 * CGFloat(step) / 8
+                carving.addLine(to: CGPoint(x: x, y: center.y + radius * (step.isMultiple(of: 2) ? 0.16 : 0.32)))
+            }
+            carving.addQuadCurve(to: CGPoint(x: center.x - radius * 0.58, y: center.y + radius * 0.16), control: CGPoint(x: center.x, y: center.y + radius * 0.8))
+            carving.closeSubpath()
+            context.fill(carving, with: .radialGradient(
+                Gradient(colors: [.white, GraveyardPalette.candle, GraveyardPalette.pumpkin[1]]),
+                center: CGPoint(x: center.x, y: center.y + radius * 0.1),
+                startRadius: 0,
+                endRadius: radius * 0.9 * CGFloat(flicker),
+            ))
         }
     }
 
-    private func drawFog(in context: GraphicsContext, size: CGSize) {
-        for index in 0..<6 {
-            let width = size.width * CGFloat(0.6 + 0.4 * Self.noise(index, 5.3))
-            let span = size.width + width
-            let speed = 5 + 6 * Self.noise(index, 2.7)
-            let direction: CGFloat = index.isMultiple(of: 2) ? 1 : -1
-            let travel = (CGFloat(time * speed) + span * CGFloat(Self.noise(index, 8.8))).truncatingRemainder(dividingBy: span)
-            let x = direction > 0 ? travel - width : size.width - travel
-            let y = layout.horizon + (size.height - layout.horizon) * CGFloat(0.1 + 0.15 * Double(index))
-            let rect = CGRect(x: x, y: y, width: width, height: size.height * 0.045)
-            context.fill(
-                Path(ellipseIn: rect),
+    private func drawWisps(in context: GraphicsContext, size: CGSize) {
+        guard scene.party < 1 else { return }
+        var wisps = context
+        wisps.opacity = 1 - scene.party
+        for index in 0..<3 {
+            let drift = time * (0.12 + 0.05 * Double(index)) + Double(index) * 2.1
+            let center = CGPoint(
+                x: size.width * CGFloat(0.5 + 0.42 * sin(drift)),
+                y: layout.horizon + (size.height - layout.horizon) * CGFloat(0.2 + 0.3 * Self.noise(index, 2.6)) + size.height * 0.02 * CGFloat(sin(time * 0.9 + Double(index) * 1.7)),
+            )
+            let pulse = 0.55 + 0.45 * sin(time * 2.3 + Double(index) * 2)
+            let radius = max(1, layout.stoneWidth * 0.03)
+            let halo = radius * 9
+            wisps.fill(
+                Path(ellipseIn: CGRect(x: center.x - halo, y: center.y - halo, width: halo * 2, height: halo * 2)),
                 with: .radialGradient(
-                    Gradient(colors: [Color.white.opacity(0.1), Color.white.opacity(0)]),
-                    center: CGPoint(x: rect.midX, y: rect.midY),
+                    Gradient(colors: [GraveyardPalette.wisp.opacity(0.4 * pulse), GraveyardPalette.wisp.opacity(0)]),
+                    center: center,
+                    startRadius: 0,
+                    endRadius: halo,
+                ),
+            )
+            wisps.fill(
+                Path(ellipseIn: CGRect(x: center.x - radius, y: center.y - radius, width: radius * 2, height: radius * 2)),
+                with: .color(GraveyardPalette.wisp.opacity(0.5 + 0.5 * pulse)),
+            )
+        }
+    }
+
+    private func drawFog(in context: GraphicsContext, size: CGSize, depth: CGFloat, layer: Int) {
+        for band in 0..<3 {
+            let index = layer * 3 + band
+            let width = size.width * CGFloat(0.7 + 0.6 * Self.noise(index, 5.3))
+            let span = size.width + width
+            let speed = 4 + 5 * Self.noise(index, 2.7)
+            let travel = (CGFloat(time * speed) + span * CGFloat(Self.noise(index, 8.8))).truncatingRemainder(dividingBy: span)
+            let x = band.isMultiple(of: 2) ? travel - width : size.width - travel
+            let height = size.height * CGFloat(0.035 + 0.02 * Self.noise(index, 1.1))
+            let rect = CGRect(x: x, y: depth - height * CGFloat(0.2 + 0.5 * Self.noise(index, 3.9)), width: width, height: height)
+            var fog = context
+            fog.scaleBy(x: 1, y: rect.height / rect.width)
+            let center = CGPoint(x: rect.midX, y: rect.midY * rect.width / rect.height)
+            fog.fill(
+                Path(ellipseIn: CGRect(x: center.x - width / 2, y: center.y - width / 2, width: width, height: width)),
+                with: .radialGradient(
+                    Gradient(colors: [GraveyardPalette.fog.opacity(0.16), GraveyardPalette.fog.opacity(0.06), GraveyardPalette.fog.opacity(0)]),
+                    center: center,
                     startRadius: 0,
                     endRadius: width / 2,
                 ),
@@ -504,24 +752,22 @@ private struct GraveyardNight: View {
                 y: (1 - t) * (1 - t) * anchorLeft.y + 2 * (1 - t) * t * sag.y + t * t * anchorRight.y,
             )
             let on = sin(time * 4 + Double(index) * 1.3) > -0.3
-            let hue = (Double(index) * 0.17 + time * 0.1).truncatingRemainder(dividingBy: 1)
-            let color = Color(hue: hue, saturation: 0.8, brightness: 1)
+            let color = GraveyardPalette.party(index + Int(time / 1.5))
             let radius = max(2, layout.stoneWidth * 0.05)
             if on {
                 party.fill(
                     Path(ellipseIn: CGRect(x: point.x - radius * 4, y: point.y - radius * 3, width: radius * 8, height: radius * 8)),
-                    with: .radialGradient(Gradient(colors: [color.opacity(0.45), color.opacity(0)]), center: CGPoint(x: point.x, y: point.y + radius), startRadius: 0, endRadius: radius * 4),
+                    with: .radialGradient(Gradient(colors: [color.opacity(0.5), color.opacity(0)]), center: CGPoint(x: point.x, y: point.y + radius), startRadius: 0, endRadius: radius * 4),
                 )
             }
             party.fill(
                 Path(ellipseIn: CGRect(x: point.x - radius, y: point.y, width: radius * 2, height: radius * 2.6)),
-                with: .color(on ? color : color.opacity(0.35)),
+                with: .color(on ? color : color.opacity(0.3)),
             )
         }
 
         for index in 0..<10 {
-            let hue = (Double(index) * 0.1 + time * 0.15).truncatingRemainder(dividingBy: 1)
-            let color = Color(hue: hue, saturation: 0.7, brightness: 1)
+            let color = GraveyardPalette.party(index)
             let center = CGPoint(
                 x: size.width * CGFloat(0.5 + 0.45 * sin(time * (0.3 + Self.noise(index, 1.9) * 0.4) + Double(index) * 1.7)),
                 y: layout.horizon - size.height * CGFloat(0.06 + 0.18 * Self.noise(index, 6.1)) + size.height * 0.03 * CGFloat(sin(time * 1.2 + Double(index))),
@@ -549,11 +795,24 @@ private struct GraveyardNight: View {
                 fading.draw(
                     Text(note == 0 ? "♪" : "♫")
                         .font(.system(size: ghost.width * 0.3, weight: .bold))
-                        .foregroundStyle(Color(hue: (Double(pose.grave) * 0.13 + cycle * 0.2).truncatingRemainder(dividingBy: 1), saturation: 0.5, brightness: 1)),
+                        .foregroundStyle(GraveyardPalette.party(pose.grave + note)),
                     at: point,
                 )
             }
         }
+    }
+
+    private func drawVignette(in context: GraphicsContext, size: CGSize) {
+        let center = CGPoint(x: size.width / 2, y: size.height * 0.55)
+        context.fill(
+            Path(CGRect(origin: .zero, size: size)),
+            with: .radialGradient(
+                Gradient(colors: [.black.opacity(0), .black.opacity(0.55)]),
+                center: center,
+                startRadius: min(size.width, size.height) * 0.4,
+                endRadius: max(size.width, size.height) * 0.75,
+            ),
+        )
     }
 
     private static func noise(_ index: Int, _ salt: Double) -> Double {
@@ -571,27 +830,28 @@ struct GraveyardGhost: Shape {
         let head = width * 0.4
         let crown = CGPoint(x: rect.midX, y: rect.minY + head)
         let hem = height * 0.1
+        let tails = 5
         var path = Path()
         path.move(to: CGPoint(x: rect.midX - head, y: crown.y))
         path.addArc(center: crown, radius: head, startAngle: .degrees(180), endAngle: .degrees(0), clockwise: false)
         path.addCurve(
-            to: CGPoint(x: rect.maxX, y: rect.maxY - hem),
+            to: CGPoint(x: rect.maxX, y: rect.maxY - hem * 0.3),
             control1: CGPoint(x: rect.midX + head, y: crown.y + height * 0.3),
-            control2: CGPoint(x: rect.maxX - width * 0.02, y: rect.maxY - hem * 2.5),
+            control2: CGPoint(x: rect.maxX - width * 0.06, y: rect.maxY - hem * 3),
         )
-        let scallops = 4
-        for index in 0..<scallops {
-            let start = rect.maxX - width * CGFloat(index) / CGFloat(scallops)
-            let end = rect.maxX - width * CGFloat(index + 1) / CGFloat(scallops)
-            let ripple = CGFloat(sin(wave + Double(index) * 1.6)) * hem * 0.35
-            path.addQuadCurve(
-                to: CGPoint(x: end, y: rect.maxY - hem),
-                control: CGPoint(x: (start + end) / 2, y: rect.maxY + hem - hem * 0.35 + ripple),
-            )
+        for index in 0..<tails {
+            let start = rect.maxX - width * CGFloat(index) / CGFloat(tails)
+            let end = rect.maxX - width * CGFloat(index + 1) / CGFloat(tails)
+            let segment = start - end
+            let curl = CGFloat(sin(wave + Double(index) * 1.6))
+            let tip = rect.maxY - hem * 0.3 * (1 + CGFloat(sin(wave * 0.8 + Double(index + 1) * 2.1))) / 2
+            let valley = CGPoint(x: (start + end) / 2, y: rect.maxY - hem * 2.2)
+            path.addQuadCurve(to: valley, control: CGPoint(x: start - segment * 0.15 + curl * segment * 0.12, y: rect.maxY - hem * 0.9))
+            path.addQuadCurve(to: CGPoint(x: end, y: tip), control: CGPoint(x: end + segment * 0.2 + curl * segment * 0.12, y: rect.maxY - hem * 1.1))
         }
         path.addCurve(
             to: CGPoint(x: rect.midX - head, y: crown.y),
-            control1: CGPoint(x: rect.minX + width * 0.02, y: rect.maxY - hem * 2.5),
+            control1: CGPoint(x: rect.minX + width * 0.06, y: rect.maxY - hem * 3),
             control2: CGPoint(x: rect.midX - head, y: crown.y + height * 0.3),
         )
         path.closeSubpath()

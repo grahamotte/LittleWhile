@@ -62,29 +62,43 @@ final class GraveyardTests: XCTestCase {
         XCTAssertEqual(layout.graves.count, 9)
     }
 
-    func testOneGhostVisitsEachMinuteOfFocusAndNeverTheSameGraveTwiceInARow() {
+    func testOneGhostVisitsAtARandomMomentInEveryMinuteOfFocus() {
         let visits = graveyard.visits
 
-        XCTAssertEqual(visits.count, 24)
-        XCTAssertTrue(visits.allSatisfy { (0..<9).contains($0) })
-        for (previous, next) in zip(visits, visits.dropFirst()) {
-            XCTAssertNotEqual(previous, next)
+        XCTAssertEqual(visits.count, 25)
+        XCTAssertTrue(visits.allSatisfy { (0..<9).contains($0.grave) })
+        for (minute, visit) in visits.enumerated() {
+            XCTAssertGreaterThanOrEqual(visit.start, Double(minute) * 60 + Graveyard.hauntMargin)
+            XCTAssertLessThanOrEqual(visit.start + Graveyard.hauntDuration, Double(minute + 1) * 60 - 1)
         }
-        XCTAssertGreaterThan(Set(visits).count, 5)
+        for (previous, next) in zip(visits, visits.dropFirst()) {
+            XCTAssertNotEqual(previous.grave, next.grave)
+        }
+        XCTAssertGreaterThan(Set(visits.map(\.grave)).count, 5)
+        XCTAssertGreaterThan(Set(visits.map { Int($0.start.truncatingRemainder(dividingBy: 60)) }).count, 8)
         XCTAssertEqual(visits, graveyard.visits)
         XCTAssertNotEqual(visits, Graveyard(key: Graveyard.Key(seed: UUID(), size: size, goalSeconds: goal)).visits)
     }
 
-    func testShortAndUnevenGoalsScheduleOnlyTheMinutesThatFit() {
-        XCTAssertEqual(Graveyard(key: Graveyard.Key(seed: seed, size: size, goalSeconds: 60)).visits.count, 0)
-        XCTAssertEqual(Graveyard(key: Graveyard.Key(seed: seed, size: size, goalSeconds: 90)).visits.count, 1)
+    func testShortAndUnevenGoalsScheduleOnlyTheGhostsThatFit() {
+        let minute = Graveyard(key: Graveyard.Key(seed: seed, size: size, goalSeconds: 60)).visits
+        XCTAssertEqual(minute.count, 1)
+        XCTAssertGreaterThanOrEqual(minute[0].start, 5)
+        XCTAssertLessThanOrEqual(minute[0].start, 54)
+
+        let uneven = Graveyard(key: Graveyard.Key(seed: seed, size: size, goalSeconds: 90)).visits
+        XCTAssertEqual(uneven.count, 2)
+        XCTAssertLessThanOrEqual(uneven[1].start + Graveyard.hauntDuration, 89)
+
+        XCTAssertEqual(Graveyard(key: Graveyard.Key(seed: seed, size: size, goalSeconds: 10)).visits.count, 0)
         XCTAssertEqual(Graveyard(key: Graveyard.Key(seed: seed, size: size, goalSeconds: 0)).visits.count, 0)
     }
 
     func testGraveyardIsQuietBetweenHauntings() {
         let graveyard = graveyard
+        let first = graveyard.visits[0].start
 
-        for elapsed in [0, 30, 59.9, 65.1, 119] {
+        for elapsed in [0, 4.9, first - 0.1, first + 5.1, 59.9] {
             let scene = graveyard.scene(elapsed: elapsed, restSeconds: 300, settled: false)
             XCTAssertTrue(scene.ghosts.isEmpty, "\(elapsed)")
             XCTAssertEqual(scene.mood, .quiet)
@@ -92,43 +106,42 @@ final class GraveyardTests: XCTestCase {
         }
     }
 
-    func testAGhostPopsUpForFiveSecondsEachMinuteAndSinksBackIn() {
+    func testAGhostPopsUpForFiveSecondsAndSinksBackIn() {
         let graveyard = graveyard
-        let grave = graveyard.visits[0]
+        let visit = graveyard.visits[0]
 
-        let rising = graveyard.scene(elapsed: 60.3, restSeconds: 300, settled: false)
-        XCTAssertEqual(rising.ghosts.map(\.grave), [grave])
+        let rising = graveyard.scene(elapsed: visit.start + 0.3, restSeconds: 300, settled: false)
+        XCTAssertEqual(rising.ghosts.map(\.grave), [visit.grave])
+        XCTAssertEqual(rising.ghosts[0].age, 0.3, accuracy: 0.0001)
         XCTAssertEqual(rising.mood, .haunting)
         XCTAssertGreaterThan(rising.ghosts[0].rise, 0)
         XCTAssertLessThan(rising.ghosts[0].rise, 1.2)
 
-        let hovering = graveyard.scene(elapsed: 62.5, restSeconds: 300, settled: false)
-        XCTAssertEqual(hovering.ghosts[0].rise, 1)
+        XCTAssertEqual(graveyard.scene(elapsed: visit.start + 2.5, restSeconds: 300, settled: false).ghosts[0].rise, 1)
+        XCTAssertEqual(graveyard.scene(elapsed: visit.start + 1.5, restSeconds: 300, settled: false).ghosts[0].arms, 1, accuracy: 0.0001)
 
-        let booing = graveyard.scene(elapsed: 61.5, restSeconds: 300, settled: false)
-        XCTAssertEqual(booing.ghosts[0].arms, 1, accuracy: 0.0001)
-
-        let sinking = graveyard.scene(elapsed: 64.6, restSeconds: 300, settled: false)
+        let sinking = graveyard.scene(elapsed: visit.start + 4.6, restSeconds: 300, settled: false)
         XCTAssertLessThan(sinking.ghosts[0].rise, 0.5)
         XCTAssertGreaterThan(sinking.ghosts[0].rise, 0)
 
-        XCTAssertEqual(graveyard.scene(elapsed: 120.5, restSeconds: 300, settled: false).ghosts.map(\.grave), [graveyard.visits[1]])
-        XCTAssertEqual(graveyard.scene(elapsed: 1_442, restSeconds: 300, settled: false).ghosts.map(\.grave), [graveyard.visits[23]])
+        for later in [graveyard.visits[1], graveyard.visits[24]] {
+            XCTAssertEqual(graveyard.scene(elapsed: later.start + 1, restSeconds: 300, settled: false).ghosts.map(\.grave), [later.grave])
+        }
     }
 
     func testTheGraveTremblesJustBeforeItsGhostAppears() {
         let graveyard = graveyard
-        let grave = graveyard.visits[0]
+        let visit = graveyard.visits[0]
 
-        XCTAssertTrue(graveyard.scene(elapsed: 58, restSeconds: 300, settled: false).trembles.allSatisfy { $0 == 0 })
-        let scene = graveyard.scene(elapsed: 59.55, restSeconds: 300, settled: false)
-        XCTAssertNotEqual(scene.trembles[grave], 0)
+        XCTAssertTrue(graveyard.scene(elapsed: visit.start - 2, restSeconds: 300, settled: false).trembles.allSatisfy { $0 == 0 })
+        let scene = graveyard.scene(elapsed: visit.start - 0.45, restSeconds: 300, settled: false)
+        XCTAssertNotEqual(scene.trembles[visit.grave], 0)
         XCTAssertEqual(scene.trembles.filter { $0 != 0 }.count, 1)
-        XCTAssertTrue(graveyard.scene(elapsed: 59.55, restSeconds: 300, settled: true).trembles.allSatisfy { $0 == 0 })
+        XCTAssertTrue(graveyard.scene(elapsed: visit.start - 0.45, restSeconds: 300, settled: true).trembles.allSatisfy { $0 == 0 })
     }
 
     func testReducedMotionShowsTheVisitingGhostStill() {
-        let ghost = graveyard.scene(elapsed: 60.1, restSeconds: 300, settled: true).ghosts[0]
+        let ghost = graveyard.scene(elapsed: graveyard.visits[0].start + 0.1, restSeconds: 300, settled: true).ghosts[0]
 
         XCTAssertEqual(ghost.rise, 1)
         XCTAssertEqual(ghost.offset, .zero)

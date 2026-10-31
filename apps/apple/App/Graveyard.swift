@@ -76,8 +76,14 @@ struct GraveyardLayout: Equatable {
     }
 }
 
+struct GraveyardVisit: Equatable {
+    let grave: Int
+    let start: TimeInterval
+}
+
 struct GraveyardGhostPose: Equatable {
     let grave: Int
+    let age: TimeInterval
     let rise: Double
     let offset: CGVector
     let tilt: Double
@@ -107,6 +113,7 @@ struct Graveyard {
     }
 
     static let hauntInterval: TimeInterval = 60
+    static let hauntMargin: TimeInterval = 5
     static let hauntDuration: TimeInterval = 5
     static let emergeDuration: TimeInterval = 0.9
     static let sinkDuration: TimeInterval = 0.9
@@ -115,7 +122,7 @@ struct Graveyard {
 
     let key: Key
     let layout: GraveyardLayout
-    let visits: [Int]
+    let visits: [GraveyardVisit]
     private let phases: [Double]
     private let lineup: [Int]
 
@@ -123,13 +130,18 @@ struct Graveyard {
         self.key = key
         let layout = GraveyardLayout(size: key.size)
         let count = layout.graves.count
-        let haunts = max(0, Int((TimeInterval(max(0, key.goalSeconds)) / Self.hauntInterval).rounded(.up)) - 1)
+        let goal = TimeInterval(max(0, key.goalSeconds))
+        let minutes = Int((goal / Self.hauntInterval).rounded(.up))
         var random = Random(seed: key.seed)
-        var visits: [Int] = []
+        var visits: [GraveyardVisit] = []
         var previous = Int(random.next() % UInt64(count))
-        for _ in 0..<haunts {
+        for minute in 0..<minutes {
+            let earliest = Self.hauntInterval * Double(minute) + Self.hauntMargin
+            let latest = min(Self.hauntInterval * Double(minute + 1), goal) - Self.hauntDuration - 1
+            guard latest >= earliest else { continue }
+            let start = earliest + random.unit() * (latest - earliest)
             previous = (previous + 1 + Int(random.next() % UInt64(count - 1))) % count
-            visits.append(previous)
+            visits.append(GraveyardVisit(grave: previous, start: start))
         }
         self.layout = layout
         self.visits = visits
@@ -177,22 +189,21 @@ struct Graveyard {
 
         var trembles = quiet
         var ghosts: [GraveyardGhostPose] = []
-        for (index, grave) in visits.enumerated() {
-            let start = Self.hauntInterval * Double(index + 1)
-            let time = elapsed - start
+        for visit in visits {
+            let time = elapsed - visit.start
             if !settled && time < 0 && time > -Self.trembleDuration {
                 let ramp = 1 + time / Self.trembleDuration
-                trembles[grave] = 0.06 * ramp * ramp * sin(elapsed * 31)
+                trembles[visit.grave] = 0.06 * ramp * ramp * sin(elapsed * 31)
             }
             guard time >= 0, time < Self.hauntDuration else { continue }
-            ghosts.append(hauntPose(grave: grave, at: time, settled: settled))
+            ghosts.append(hauntPose(grave: visit.grave, at: time, settled: settled))
         }
         return GraveyardScene(ghosts: ghosts, trembles: trembles, party: 0, mood: ghosts.isEmpty ? .quiet : .haunting)
     }
 
     private func hauntPose(grave: Int, at time: TimeInterval, settled: Bool) -> GraveyardGhostPose {
         guard !settled else {
-            return GraveyardGhostPose(grave: grave, rise: 1, offset: .zero, tilt: 0, facing: 1, arms: 1)
+            return GraveyardGhostPose(grave: grave, age: Self.emergeDuration * 2, rise: 1, offset: .zero, tilt: 0, facing: 1, arms: 1)
         }
         let rise: Double
         if time < Self.emergeDuration {
@@ -207,6 +218,7 @@ struct Graveyard {
         let boo = Self.smoothstep(time / 0.6) * (1 - Self.smoothstep((time - 2.6) / 0.6))
         return GraveyardGhostPose(
             grave: grave,
+            age: time,
             rise: rise,
             offset: CGVector(dx: 0, dy: -size.height * 0.05 * CGFloat(sin(time * 3))),
             tilt: 0.08 * sin(time * 2.3),
@@ -223,7 +235,7 @@ struct Graveyard {
         let party = settled ? 1 : Self.smoothstep(min(time, rest - time) / max(0.001, fade))
         let ghosts = lineup.enumerated().compactMap { order, grave -> GraveyardGhostPose? in
             guard !settled else {
-                return GraveyardGhostPose(grave: grave, rise: 1, offset: .zero, tilt: 0, facing: 1, arms: 0.6)
+                return GraveyardGhostPose(grave: grave, age: Self.emergeDuration * 2, rise: 1, offset: .zero, tilt: 0, facing: 1, arms: 0.6)
             }
             let local = time - stagger * Double(order)
             guard local > 0 else { return nil }
@@ -238,6 +250,7 @@ struct Graveyard {
             let spin = (local + phase).truncatingRemainder(dividingBy: period)
             return GraveyardGhostPose(
                 grave: grave,
+                age: local,
                 rise: rise,
                 offset: CGVector(
                     dx: size.width * 0.35 * CGFloat(groove * sin(time * 1.7 + phase)),

@@ -3,7 +3,7 @@ import XCTest
 @testable import App
 
 final class GraveyardTimerViewTests: XCTestCase {
-    func testGhostHasARoundHeadAndAScallopedHemInsideItsBox() {
+    func testGhostHasARoundHeadAndATatteredHemInsideItsBox() {
         let rect = CGRect(x: 0, y: 0, width: 100, height: 120)
         let path = GraveyardGhost().path(in: rect).cgPath
         let bounds = path.boundingBoxOfPath
@@ -14,10 +14,11 @@ final class GraveyardTimerViewTests: XCTestCase {
         XCTAssertLessThanOrEqual(bounds.maxY, 120.5)
         XCTAssertTrue(path.contains(CGPoint(x: 50, y: 10)))
         XCTAssertTrue(path.contains(CGPoint(x: 50, y: 60)))
-        XCTAssertTrue(path.contains(CGPoint(x: 12.5, y: 112)))
+        XCTAssertTrue(path.contains(CGPoint(x: 50, y: 90)))
         XCTAssertFalse(path.contains(CGPoint(x: 2, y: 2)))
         XCTAssertFalse(path.contains(CGPoint(x: 98, y: 2)))
-        XCTAssertFalse(path.contains(CGPoint(x: 25, y: 119)))
+        XCTAssertFalse(path.contains(CGPoint(x: 10, y: 114)))
+        XCTAssertFalse(path.contains(CGPoint(x: 50, y: 114)))
     }
 
     func testGhostHemRipplesWithTheWave() {
