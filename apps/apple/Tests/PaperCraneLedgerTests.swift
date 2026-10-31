@@ -1,5 +1,5 @@
 import XCTest
-@testable import App
+@testable import LittleWhileCore
 
 final class PaperCraneLedgerTests: XCTestCase {
     private var defaults: UserDefaults!

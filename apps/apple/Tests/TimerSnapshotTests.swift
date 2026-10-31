@@ -1,5 +1,5 @@
 import XCTest
-@testable import App
+@testable import LittleWhileCore
 
 final class TimerSnapshotTests: XCTestCase {
     private let date = Date(timeIntervalSince1970: 10_000)

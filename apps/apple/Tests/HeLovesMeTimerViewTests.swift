@@ -1,6 +1,6 @@
 import CoreGraphics
 import XCTest
-@testable import App
+@testable import LittleWhileCore
 
 final class HeLovesMeTimerViewTests: XCTestCase {
     func testPetalIsSlenderAtTheBaseWidestNearTheTipAndNotched() {

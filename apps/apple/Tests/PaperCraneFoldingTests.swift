@@ -1,6 +1,6 @@
 import XCTest
 import simd
-@testable import App
+@testable import LittleWhileCore
 
 final class PaperCraneFoldingTests: XCTestCase {
     private func assertPoint(_ point: SIMD3<Double>, _ expected: SIMD3<Double>, accuracy: Double = 0.0001, file: StaticString = #filePath, line: UInt = #line) {

@@ -1,5 +1,5 @@
 import XCTest
-@testable import App
+@testable import LittleWhileCore
 
 @MainActor
 final class AppViewTests: XCTestCase {

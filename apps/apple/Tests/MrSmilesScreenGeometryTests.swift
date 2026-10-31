@@ -1,5 +1,5 @@
 import XCTest
-@testable import App
+@testable import LittleWhileCore
 
 final class MrSmilesScreenGeometryTests: XCTestCase {
     func testScreenWithoutHomeIndicatorUsesSquareCorners() {

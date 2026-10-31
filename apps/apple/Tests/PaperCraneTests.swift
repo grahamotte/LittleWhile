@@ -1,7 +1,7 @@
 import CoreGraphics
 import XCTest
 import simd
-@testable import App
+@testable import LittleWhileCore
 
 final class PaperCraneTests: XCTestCase {
     private let date = Date(timeIntervalSince1970: 10_000)

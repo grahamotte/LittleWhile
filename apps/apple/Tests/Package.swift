@@ -2,15 +2,22 @@
 import PackageDescription
 
 let package = Package(
-    name: "App",
+    name: "LittleWhile",
     platforms: [.macOS(.v15)],
     targets: [
         .target(
-            name: "App",
+            name: "LittleWhileCore",
             path: ".",
-            exclude: ["App/App.swift", "App/Assets.xcassets", "App/Config", "App/PrivacyInfo.xcprivacy", "App.xcodeproj", "Tests", "TimerActivityWidget"],
+            exclude: ["App/App.swift", "App/Assets.xcassets", "App/Config", "App/DebugHooks.swift", "App/PrivacyInfo.xcprivacy", "App.xcodeproj", "Tests", "TimerActivityWidget"],
             sources: ["App", "Shared"],
+            swiftSettings: [.define("APP_DEV"), .swiftLanguageMode(.v5)],
         ),
-        .testTarget(name: "AppTests", dependencies: ["App"], path: "Tests", exclude: ["Package.swift"]),
+        .testTarget(
+            name: "LittleWhileCoreTests",
+            dependencies: ["LittleWhileCore"],
+            path: "Tests",
+            exclude: ["Package.swift"],
+            swiftSettings: [.swiftLanguageMode(.v5)],
+        ),
     ]
 )
