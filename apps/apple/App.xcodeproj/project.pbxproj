@@ -222,6 +222,7 @@
 			buildSettings = {
 				APP_BUNDLE_IDENTIFIER = app.littlewhile;
 				CLANG_ENABLE_MODULES = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG APP_DEV $(inherited)";
 				SWIFT_VERSION = 5.0;
 			};
 			name = Debug;

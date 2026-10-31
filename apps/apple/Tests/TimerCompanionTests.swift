@@ -1,6 +1,6 @@
 import UserNotifications
 import XCTest
-@testable import App
+@testable import LittleWhileCore
 
 @MainActor
 final class TimerCompanionTests: XCTestCase {

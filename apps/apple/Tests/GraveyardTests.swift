@@ -1,6 +1,6 @@
 import CoreGraphics
 import XCTest
-@testable import App
+@testable import LittleWhileCore
 
 final class GraveyardTests: XCTestCase {
     private let date = Date(timeIntervalSince1970: 10_000)

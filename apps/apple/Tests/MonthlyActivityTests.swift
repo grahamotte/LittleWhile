@@ -1,5 +1,5 @@
 import XCTest
-@testable import App
+@testable import LittleWhileCore
 
 final class MonthlyActivityTests: XCTestCase {
     private var calendar: Calendar {

@@ -1,6 +1,6 @@
 import CoreGraphics
 import XCTest
-@testable import App
+@testable import LittleWhileCore
 
 final class MrSmilesMotionTests: XCTestCase {
     private let seed = UUID(uuidString: "01234567-89AB-CDEF-0123-456789ABCDEF")!

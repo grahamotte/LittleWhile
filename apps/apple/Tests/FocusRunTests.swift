@@ -1,5 +1,5 @@
 import XCTest
-@testable import App
+@testable import LittleWhileCore
 
 final class FocusRunTests: XCTestCase {
     private let date = Date(timeIntervalSince1970: 1_700_000_000)

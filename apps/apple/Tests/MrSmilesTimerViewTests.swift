@@ -1,6 +1,6 @@
 import CoreGraphics
 import XCTest
-@testable import App
+@testable import LittleWhileCore
 
 final class MrSmilesTimerViewTests: XCTestCase {
     private let rect = CGRect(x: 0, y: 0, width: 100, height: 100)
