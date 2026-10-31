@@ -22,7 +22,7 @@
     "size": "s-1vcpu-2gb"
   },
   "apps": {
-    "build": "1.2.0",
+    "build": "1.2.1",
     "contactEmail": "go@graham.lol",
     "contactFirstName": "Graham",
     "contactLastName": "Otte",
@@ -92,7 +92,7 @@
         }
       }
     },
-    "version": "1.2.0",
+    "version": "1.2.1",
     "whatsNew": "Two new themes: 千羽鶴 (Paper Crane), where a square of paper folds into an origami crane as you focus, one crane for every focus minute, each in its own paper color, with a lifetime count of the cranes you've folded; and Graveyard, where ghosts rise from the graves each minute and party through your rest. Settings now fit on one screen, the privacy policy link moved to the end of History, and alarms no longer show extra countdowns on the Lock Screen."
   }
 }
