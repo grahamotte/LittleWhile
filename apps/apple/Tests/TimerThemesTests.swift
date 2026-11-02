@@ -4,7 +4,7 @@ import XCTest
 @MainActor
 final class TimerThemesTests: XCTestCase {
     func testRegistryContainsThemesWithStableIdentities() async {
-        XCTAssertEqual(TimerThemes.all.map(\.id), ["boring", "mr-smiles", "he-loves-me", "paper-crane", "graveyard"])
+        XCTAssertEqual(TimerThemes.all.map(\.id), ["boring", "mr-smiles", "he-loves-me", "paper-crane", "graveyard", "plane"])
         XCTAssertEqual(TimerThemes.resolve("boring").name, "Boring")
         XCTAssertEqual(TimerThemes.resolve("mr-smiles").name, "Mr Smiles")
         XCTAssertEqual(TimerThemes.resolve("mr-smiles").colorScheme, .dark)
@@ -14,6 +14,8 @@ final class TimerThemesTests: XCTestCase {
         XCTAssertEqual(TimerThemes.resolve("paper-crane").colorScheme, .light)
         XCTAssertEqual(TimerThemes.resolve("graveyard").name, "Graveyard")
         XCTAssertEqual(TimerThemes.resolve("graveyard").colorScheme, .dark)
+        XCTAssertEqual(TimerThemes.resolve("plane").name, "Bon Voyage")
+        XCTAssertEqual(TimerThemes.resolve("plane").colorScheme, .light)
     }
 
     func testUnavailableThemeUsesBoringWithoutChangingSavedIdentifier() async {
