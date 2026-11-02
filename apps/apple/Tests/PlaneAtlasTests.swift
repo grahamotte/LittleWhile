@@ -6,11 +6,12 @@ final class PlaneAtlasTests: XCTestCase {
         let cities = PlaneAtlas.cities
         let capitals = cities.filter { $0.kind == .capital }
 
-        XCTAssertEqual(cities.count, 485)
+        XCTAssertEqual(cities.count, 483)
         XCTAssertEqual(capitals.count, 169)
         XCTAssertEqual(Set(capitals.map(\.country)).count, capitals.count)
         XCTAssertEqual(cities.filter { $0.kind == .stateCapital }.count, 198)
-        XCTAssertEqual(cities.filter { $0.kind == .city }.count, 118)
+        XCTAssertEqual(cities.filter { $0.kind == .city }.count, 116)
+        XCTAssertEqual(cities.filter(\.hub).count, 100)
         for city in cities {
             XCTAssertFalse(city.name.isEmpty)
             XCTAssertFalse(city.name.contains("  "))
@@ -37,6 +38,10 @@ final class PlaneAtlasTests: XCTestCase {
         XCTAssertEqual(cities.first { $0.name == "New York" }?.kind, .city)
         XCTAssertEqual(cities.first { $0.name == "Hong Kong" }?.kind, .city)
         XCTAssertEqual(cities.first { $0.name == "Venice" }?.kind, .city)
+        XCTAssertEqual(cities.first { $0.name == "Vancouver" }?.country, "Canada")
+        XCTAssertEqual(cities.filter { $0.hub }.map(\.name).filter { ["London", "Dubai", "Singapore", "Los Angeles", "Shanghai"].contains($0) }.count, 5)
+        XCTAssertFalse(cities.first { $0.name == "Venice" }?.hub ?? true)
+        XCTAssertFalse(cities.first { $0.name == "Vatican City" }?.hub ?? true)
     }
 
     func testCityParsingRejectsMalformedLines() {
@@ -46,6 +51,8 @@ final class PlaneAtlasTests: XCTestCase {
         )
         XCTAssertEqual(PlaneAtlas.city("Osaka|Japan|m|34.75|135.46")?.kind, .city)
         XCTAssertEqual(PlaneAtlas.city("Austin|United States|s|30.27|-97.74")?.kind, .stateCapital)
+        XCTAssertEqual(PlaneAtlas.city("Austin|United States|s|30.27|-97.74")?.hub, false)
+        XCTAssertEqual(PlaneAtlas.city("Tokyo|Japan|C|35.69|139.75"), PlaneCity(name: "Tokyo", country: "Japan", latitude: 35.69, longitude: 139.75, kind: .capital, hub: true))
         XCTAssertNil(PlaneAtlas.city("Lima|Peru|-12.05|-77.05"))
         XCTAssertNil(PlaneAtlas.city("Lima|Peru|x|-12.05|-77.05"))
         XCTAssertNil(PlaneAtlas.city("Lima|Peru|cs|-12.05|-77.05"))

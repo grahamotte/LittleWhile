@@ -12,6 +12,7 @@ struct PlaneCity: Equatable {
     let latitude: Double
     let longitude: Double
     var kind: Kind = .capital
+    var hub = false
 
     var point: PlaneVector {
         PlaneVector(latitude: latitude, longitude: longitude)
@@ -35,13 +36,14 @@ enum PlaneAtlas {
         guard fields.count == 5,
               !fields[0].isEmpty,
               fields[2].count == 1,
-              let kind = fields[2].first.flatMap(PlaneCity.Kind.init),
+              let letter = fields[2].first,
+              let kind = letter.lowercased().first.flatMap(PlaneCity.Kind.init),
               let latitude = Double(fields[3]),
               let longitude = Double(fields[4]),
               abs(latitude) <= 90,
               abs(longitude) <= 180
         else { return nil }
-        return PlaneCity(name: String(fields[0]), country: String(fields[1]), latitude: latitude, longitude: longitude, kind: kind)
+        return PlaneCity(name: String(fields[0]), country: String(fields[1]), latitude: latitude, longitude: longitude, kind: kind, hub: letter.isUppercase)
     }
 
     static func ring(_ line: Substring) -> [PlaneVector] {
@@ -67,8 +69,8 @@ Kabul|Afghanistan|c|34.52|69.18
 Tirana|Albania|c|41.33|19.82
 Algiers|Algeria|c|36.77|3.05
 Andorra|Andorra|c|42.50|1.52
-Luanda|Angola|c|-8.84|13.23
-Buenos Aires|Argentina|c|-34.60|-58.40
+Luanda|Angola|C|-8.84|13.23
+Buenos Aires|Argentina|C|-34.60|-58.40
 Yerevan|Armenia|c|40.18|44.51
 Canberra|Australia|c|-35.28|149.13
 Cairns|Australia|m|-16.89|145.76
@@ -76,16 +78,16 @@ Adelaide|Australia|s|-34.93|138.60
 Brisbane|Australia|s|-27.45|153.03
 Darwin|Australia|s|-12.43|130.85
 Hobart|Australia|s|-42.85|147.30
-Melbourne|Australia|s|-37.82|144.97
+Melbourne|Australia|S|-37.82|144.97
 Perth|Australia|s|-31.95|115.84
-Sydney|Australia|s|-33.92|151.18
-Vienna|Austria|c|48.20|16.36
+Sydney|Australia|S|-33.92|151.18
+Vienna|Austria|C|48.20|16.36
 Baku|Azerbaijan|c|40.40|49.86
 Manama|Bahrain|c|26.24|50.58
-Dhaka|Bangladesh|c|23.73|90.41
+Dhaka|Bangladesh|C|23.73|90.41
 Chattogram|Bangladesh|m|22.33|91.80
 Minsk|Belarus|c|53.90|27.56
-Brussels|Belgium|c|50.84|4.33
+Brussels|Belgium|C|50.84|4.33
 Belmopan|Belize|c|17.25|-88.77
 Porto-Novo|Benin|c|6.48|2.62
 Thimphu|Bhutan|c|27.47|89.64
@@ -96,7 +98,7 @@ Gaborone|Botswana|c|-24.65|25.91
 Brasília|Brazil|c|-15.78|-47.92
 Campinas|Brazil|m|-22.90|-47.10
 Aracaju|Brazil|s|-10.90|-37.12
-Belo Horizonte|Brazil|s|-19.91|-43.92
+Belo Horizonte|Brazil|S|-19.91|-43.92
 Belém|Brazil|s|-1.45|-48.48
 Boa Vista|Brazil|s|2.82|-60.67
 Campo Grande|Brazil|s|-20.45|-54.62
@@ -116,10 +118,10 @@ Porto Alegre|Brazil|s|-30.05|-51.20
 Porto Velho|Brazil|s|-8.75|-63.90
 Recife|Brazil|s|-8.07|-34.92
 Rio Branco|Brazil|s|-9.97|-67.80
-Rio de Janeiro|Brazil|s|-22.92|-43.23
+Rio de Janeiro|Brazil|S|-22.92|-43.23
 Salvador|Brazil|s|-12.97|-38.48
 São Luís|Brazil|s|-2.51|-44.27
-São Paulo|Brazil|s|-23.56|-46.63
+São Paulo|Brazil|S|-23.56|-46.63
 Teresina|Brazil|s|-5.09|-42.78
 Vitória|Brazil|s|-20.32|-40.37
 Bandar Seri Begawan|Brunei|c|4.88|114.93
@@ -130,8 +132,8 @@ Phnom Penh|Cambodia|c|11.55|104.91
 Yaoundé|Cameroon|c|3.87|11.51
 Ottawa|Canada|c|45.42|-75.70
 Calgary|Canada|m|51.08|-114.08
-Montréal|Canada|m|45.50|-73.59
-Vancouver|Canada|m|49.28|-123.12
+Montréal|Canada|M|45.50|-73.59
+Vancouver|Canada|M|49.28|-123.12
 Charlottetown|Canada|s|46.25|-63.13
 Edmonton|Canada|s|53.55|-113.50
 Fredericton|Canada|s|45.95|-66.63
@@ -140,15 +142,15 @@ Iqaluit|Canada|s|63.75|-68.50
 Québec|Canada|s|46.84|-71.25
 Regina|Canada|s|50.45|-104.62
 St. John's|Canada|s|47.58|-52.68
-Toronto|Canada|s|43.70|-79.42
+Toronto|Canada|S|43.70|-79.42
 Victoria|Canada|s|48.43|-123.35
 Whitehorse|Canada|s|60.72|-135.05
 Winnipeg|Canada|s|49.88|-97.17
 Yellowknife|Canada|s|62.44|-114.40
 Bangui|Central African Republic|c|4.37|18.56
 N'Djamena|Chad|c|12.12|15.05
-Santiago|Chile|c|-33.45|-70.67
-Beijing|China|c|39.93|116.39
+Santiago|Chile|C|-33.45|-70.67
+Beijing|China|C|39.93|116.39
 Baotou|China|m|40.65|109.82
 Dalian|China|m|38.92|121.63
 Dongguan|China|m|23.05|113.74
@@ -168,9 +170,9 @@ Zibo|China|m|36.80|118.05
 Changchun|China|s|43.87|125.34
 Changsha|China|s|28.20|112.97
 Chengdu|China|s|30.67|104.07
-Chongqing|China|s|29.57|106.59
+Chongqing|China|S|29.57|106.59
 Fuzhou|China|s|26.08|119.30
-Guangzhou|China|s|23.15|113.32
+Guangzhou|China|S|23.15|113.32
 Guiyang|China|s|26.58|106.72
 Haikou|China|s|20.05|110.32
 Hangzhou|China|s|30.25|120.17
@@ -184,65 +186,65 @@ Lhasa|China|s|29.65|91.10
 Nanchang|China|s|28.68|115.88
 Nanjing|China|s|32.05|118.78
 Nanning|China|s|22.82|108.32
-Shanghai|China|s|31.22|121.43
+Shanghai|China|S|31.22|121.43
 Shenyeng|China|s|41.81|123.45
 Shijiazhuang|China|s|38.05|114.48
 Taiyuan|China|s|37.88|112.54
-Tianjin|China|s|39.13|117.20
-Wuhan|China|s|30.58|114.27
+Tianjin|China|S|39.13|117.20
+Wuhan|China|S|30.58|114.27
 Xian|China|s|34.28|108.89
 Xining|China|s|36.62|101.77
 Yinchuan|China|s|38.47|106.27
 Zhaotang|China|s|27.32|103.72
 Zhengzhou|China|s|34.76|113.66
 Ürümqi|China|s|43.81|87.57
-Bogotá|Colombia|c|4.60|-74.09
+Bogotá|Colombia|C|4.60|-74.09
 Cali|Colombia|m|3.40|-76.50
 Medellín|Colombia|m|6.28|-75.58
 San José|Costa Rica|c|9.94|-84.09
 Zagreb|Croatia|c|45.80|16.00
 Havana|Cuba|c|23.13|-82.37
-Prague|Czechia|c|50.09|14.46
+Prague|Czechia|C|50.09|14.46
 Yamoussoukro|Côte d'Ivoire|c|6.82|-5.28
 Abidjan|Côte d'Ivoire|m|5.32|-4.04
-Kinshasa|DR Congo|c|-4.33|15.31
-Copenhagen|Denmark|c|55.68|12.56
+Kinshasa|DR Congo|C|-4.33|15.31
+Copenhagen|Denmark|C|55.68|12.56
 Djibouti|Djibouti|c|11.60|43.15
 Santo Domingo|Dominican Republic|c|18.47|-69.90
 Quito|Ecuador|c|-0.21|-78.50
 Guayaquil|Ecuador|m|-2.22|-79.92
-Cairo|Egypt|c|30.05|31.25
+Cairo|Egypt|C|30.05|31.25
 Alexandria|Egypt|m|31.20|29.95
 San Salvador|El Salvador|c|13.71|-89.20
 Malabo|Equatorial Guinea|c|3.75|8.78
 Asmara|Eritrea|c|15.33|38.93
 Tallinn|Estonia|c|59.43|24.73
 Mbabane|Eswatini|c|-26.32|31.13
-Addis Ababa|Ethiopia|c|9.04|38.70
-Helsinki|Finland|c|60.18|24.93
-Paris|France|c|48.87|2.33
+Addis Ababa|Ethiopia|C|9.04|38.70
+Helsinki|Finland|C|60.18|24.93
+Paris|France|C|48.87|2.33
 Lyon|France|m|45.77|4.83
 Marseille|France|m|43.29|5.37
 Libreville|Gabon|c|0.39|9.46
 Tbilisi|Georgia|c|41.73|44.79
-Berlin|Germany|c|52.52|13.40
-Frankfurt|Germany|m|50.10|8.68
-Hamburg|Germany|m|53.55|10.00
+Berlin|Germany|C|52.52|13.40
+Frankfurt|Germany|M|50.10|8.68
+Hamburg|Germany|M|53.55|10.00
 Mannheim|Germany|m|49.50|8.47
-Munich|Germany|m|48.13|11.57
+Munich|Germany|M|48.13|11.57
 Stuttgart|Germany|m|48.78|9.20
 Accra|Ghana|c|5.55|-0.22
-Athens|Greece|c|37.99|23.73
+Athens|Greece|C|37.99|23.73
 Guatemala City|Guatemala|c|14.62|-90.53
 Conakry|Guinea|c|9.53|-13.68
 Bissau|Guinea-Bissau|c|11.87|-15.60
 Georgetown|Guyana|c|6.80|-58.17
 Port-au-Prince|Haiti|c|18.54|-72.34
 Tegucigalpa|Honduras|c|14.10|-87.22
-Hong Kong|Hong Kong S.A.R.|m|22.31|114.18
-Budapest|Hungary|c|47.50|19.08
-Reykjavík|Iceland|c|64.15|-21.95
-New Delhi|India|c|28.60|77.20
+Hong Kong|Hong Kong S.A.R.|M|22.31|114.18
+Budapest|Hungary|C|47.50|19.08
+Reykjavík|Iceland|C|64.15|-21.95
+New Delhi|India|C|28.60|77.20
 Agra|India|m|27.17|78.01
 Indore|India|m|22.72|75.86
 Kanpur|India|m|26.46|80.32
@@ -253,25 +255,25 @@ Varanasi|India|m|25.33|83.00
 Agartala|India|s|23.84|91.28
 Aizawl|India|s|23.71|92.72
 Amaravati|India|s|16.53|80.52
-Bengaluru|India|s|12.97|77.56
+Bengaluru|India|S|12.97|77.56
 Bhopal|India|s|23.25|77.41
 Bhubaneswar|India|s|20.27|85.83
 Chandigarh|India|s|30.72|76.78
-Chennai|India|s|13.09|80.28
+Chennai|India|S|13.09|80.28
 Daman|India|s|20.42|72.85
 Dehra Dun|India|s|30.32|78.05
 Dispur|India|s|26.14|91.77
 Gandhinagar|India|s|23.30|72.64
 Gangtok|India|s|27.33|88.62
-Hyderabad|India|s|17.40|78.48
+Hyderabad|India|S|17.40|78.48
 Imphal|India|s|24.80|93.95
 Itanagar|India|s|27.10|93.62
 Jaipur|India|s|26.92|75.81
 Kohima|India|s|25.67|94.12
-Kolkata|India|s|22.50|88.32
+Kolkata|India|S|22.50|88.32
 Leh|India|s|34.16|77.57
 Lucknow|India|s|26.86|80.91
-Mumbai|India|s|19.02|72.86
+Mumbai|India|S|19.02|72.86
 Panaji|India|s|15.49|73.82
 Patna|India|s|25.63|85.13
 Puducherry|India|s|11.93|79.83
@@ -281,33 +283,33 @@ Shillong|India|s|25.57|91.88
 Simla|India|s|31.10|77.17
 Srinagar|India|s|34.10|74.81
 Thiruvananthapuram|India|s|8.50|76.95
-Jakarta|Indonesia|c|-6.17|106.83
+Jakarta|Indonesia|C|-6.17|106.83
 Bandung|Indonesia|m|-6.95|107.57
 Medan|Indonesia|m|3.58|98.65
 Surabaya|Indonesia|m|-7.25|112.75
-Tehran|Iran|c|35.67|51.42
+Tehran|Iran|C|35.67|51.42
 Mashhad|Iran|m|36.27|59.57
-Baghdad|Iraq|c|33.34|44.39
-Dublin|Ireland|c|53.34|-6.25
+Baghdad|Iraq|C|33.34|44.39
+Dublin|Ireland|C|53.34|-6.25
 Jerusalem|Israel|c|31.78|35.21
 Tel Aviv|Israel|m|32.08|34.77
-Rome|Italy|c|41.90|12.48
+Rome|Italy|C|41.90|12.48
 Florence|Italy|m|43.78|11.25
-Milan|Italy|m|45.47|9.20
+Milan|Italy|M|45.47|9.20
 Naples|Italy|m|40.84|14.24
 Venice|Italy|m|45.44|12.33
 Kingston|Jamaica|c|17.98|-76.77
-Tokyo|Japan|c|35.69|139.75
+Tokyo|Japan|C|35.69|139.75
 Fukuoka|Japan|m|33.60|130.41
 Hiroshima|Japan|m|34.39|132.44
 Kyoto|Japan|m|35.03|135.75
 Nagoya|Japan|m|35.16|136.91
 Sapporo|Japan|m|43.08|141.34
 Sendai|Japan|m|38.29|141.02
-Ōsaka|Japan|m|34.75|135.46
+Ōsaka|Japan|M|34.75|135.46
 Amman|Jordan|c|31.95|35.93
 Astana|Kazakhstan|c|51.18|71.43
-Nairobi|Kenya|c|-1.28|36.81
+Nairobi|Kenya|C|-1.28|36.81
 Pristina|Kosovo|c|42.67|21.17
 Kuwait City|Kuwait|c|29.37|47.98
 Bishkek|Kyrgyzstan|c|42.88|74.58
@@ -323,11 +325,11 @@ Luxembourg|Luxembourg|c|49.61|6.13
 Macau|Macau S.A.R|m|22.20|113.55
 Antananarivo|Madagascar|c|-18.91|47.51
 Lilongwe|Malawi|c|-13.98|33.78
-Kuala Lumpur|Malaysia|c|3.17|101.70
+Kuala Lumpur|Malaysia|C|3.17|101.70
 George Town|Malaysia|m|5.41|100.33
 Bamako|Mali|c|12.65|-8.00
 Nouakchott|Mauritania|c|18.09|-15.98
-Mexico City|Mexico|c|19.44|-99.13
+Mexico City|Mexico|C|19.44|-99.13
 Aguascalientes|Mexico|s|21.88|-102.29
 Campeche|Mexico|s|19.83|-90.50
 Chetumal|Mexico|s|18.50|-88.30
@@ -363,45 +365,45 @@ Monaco|Monaco|c|43.74|7.41
 Ulaanbaatar|Mongolia|c|47.92|106.91
 Podgorica|Montenegro|c|42.47|19.27
 Rabat|Morocco|c|34.03|-6.84
-Casablanca|Morocco|m|33.60|-7.62
+Casablanca|Morocco|M|33.60|-7.62
 Marrakesh|Morocco|m|31.63|-8.00
 Maputo|Mozambique|c|-25.95|32.59
 Naypyidaw|Myanmar|c|19.77|96.12
 Yangon|Myanmar|m|16.79|96.16
 Windhoek|Namibia|c|-22.57|17.08
 Kathmandu|Nepal|c|27.72|85.31
-Amsterdam|Netherlands|c|52.35|4.91
+Amsterdam|Netherlands|C|52.35|4.91
 Wellington|New Zealand|c|-41.30|174.78
-Auckland|New Zealand|m|-36.85|174.76
+Auckland|New Zealand|M|-36.85|174.76
 Managua|Nicaragua|c|12.15|-86.27
 Niamey|Niger|c|13.52|2.11
 Abuja|Nigeria|c|9.09|7.53
 Ibadan|Nigeria|m|7.38|3.93
 Kano|Nigeria|m|12.00|8.52
-Lagos|Nigeria|m|6.45|3.39
+Lagos|Nigeria|M|6.45|3.39
 Pyongyang|North Korea|c|39.02|125.75
 Skopje|North Macedonia|c|42.00|21.43
-Oslo|Norway|c|59.92|10.75
+Oslo|Norway|C|59.92|10.75
 Muscat|Oman|c|23.61|58.59
 Islamabad|Pakistan|c|33.70|73.16
 Faisalabad|Pakistan|m|31.41|73.11
-Karachi|Pakistan|m|24.87|66.99
-Lahore|Pakistan|m|31.56|74.35
-Panama City|Panama|c|8.97|-79.53
+Karachi|Pakistan|M|24.87|66.99
+Lahore|Pakistan|M|31.56|74.35
+Panama City|Panama|C|8.97|-79.53
 Port Moresby|Papua New Guinea|c|-9.46|147.19
 Asunción|Paraguay|c|-25.29|-57.64
-Lima|Peru|c|-12.05|-77.05
+Lima|Peru|C|-12.05|-77.05
 Cusco|Peru|m|-13.53|-71.97
-Manila|Philippines|c|14.61|120.98
-Warsaw|Poland|c|52.25|21.00
+Manila|Philippines|C|14.61|120.98
+Warsaw|Poland|C|52.25|21.00
 Katowice|Poland|m|50.26|19.02
 Kraków|Poland|m|50.06|19.96
-Lisbon|Portugal|c|38.72|-9.15
+Lisbon|Portugal|C|38.72|-9.15
 Porto|Portugal|m|41.15|-8.62
-Doha|Qatar|c|25.29|51.53
+Doha|Qatar|C|25.29|51.53
 Brazzaville|Republic of the Congo|c|-4.26|15.28
-Bucharest|Romania|c|44.44|26.10
-Moscow|Russia|c|55.75|37.61
+Bucharest|Romania|C|44.44|26.10
+Moscow|Russia|C|55.75|37.61
 Chelyabinsk|Russia|s|55.16|61.44
 Kazan|Russia|s|55.75|49.12
 Nizhny Novgorod|Russia|s|56.33|44.00
@@ -414,97 +416,95 @@ Ufa|Russia|s|54.79|56.04
 Yekaterinburg|Russia|s|56.85|60.60
 Kigali|Rwanda|c|-1.95|30.06
 San Marino|San Marino|c|43.94|12.44
-Riyadh|Saudi Arabia|c|24.64|46.77
+Riyadh|Saudi Arabia|C|24.64|46.77
 Dammam|Saudi Arabia|m|26.43|50.10
 Jeddah|Saudi Arabia|m|21.52|39.22
 Dakar|Senegal|c|14.72|-17.48
 Belgrade|Serbia|c|44.82|20.47
 Freetown|Sierra Leone|c|8.47|-13.24
-Singapore|Singapore|c|1.29|103.85
+Singapore|Singapore|C|1.29|103.85
 Bratislava|Slovakia|c|48.15|17.12
 Ljubljana|Slovenia|c|46.06|14.51
 Mogadishu|Somalia|c|2.07|45.36
 Pretoria|South Africa|c|-25.70|28.23
-Cape Town|South Africa|m|-33.92|18.43
+Cape Town|South Africa|M|-33.92|18.43
 Durban|South Africa|m|-29.86|30.98
-Johannesburg|South Africa|m|-26.17|28.03
-Seoul|South Korea|c|37.57|127.00
+Johannesburg|South Africa|M|-26.17|28.03
+Seoul|South Korea|C|37.57|127.00
 Busan|South Korea|m|35.10|129.01
 Daegu|South Korea|m|35.87|128.61
 Juba|South Sudan|c|4.83|31.58
-Madrid|Spain|c|40.40|-3.69
-Barcelona|Spain|m|41.39|2.18
+Madrid|Spain|C|40.40|-3.69
+Barcelona|Spain|M|41.39|2.18
 Seville|Spain|m|37.41|-5.98
 Sri Jayawardenepura Kotte|Sri Lanka|c|6.90|79.95
 Khartoum|Sudan|c|15.59|32.53
 Paramaribo|Suriname|c|5.84|-55.17
-Stockholm|Sweden|c|59.35|18.10
+Stockholm|Sweden|C|59.35|18.10
 Bern|Switzerland|c|46.92|7.47
-Geneva|Switzerland|m|46.21|6.14
-Zürich|Switzerland|m|47.38|8.55
+Geneva|Switzerland|M|46.21|6.14
+Zürich|Switzerland|M|47.38|8.55
 Damascus|Syria|c|33.50|36.30
 Aleppo|Syria|m|36.23|37.17
-Taipei|Taiwan|c|25.04|121.57
+Taipei|Taiwan|C|25.04|121.57
 Kaohsiung|Taiwan|m|22.63|120.27
 Taichung|Taiwan|m|24.15|120.68
 Dushanbe|Tajikistan|c|38.56|68.77
 Dodoma|Tanzania|c|-6.18|35.75
 Dar es Salaam|Tanzania|m|-6.80|39.27
-Bangkok|Thailand|c|13.75|100.51
+Bangkok|Thailand|C|13.75|100.51
 Banjul|The Gambia|c|13.45|-16.59
 Dili|Timor-Leste|c|-8.56|125.58
 Lomé|Togo|c|6.13|1.22
 Port-of-Spain|Trinidad and Tobago|c|10.65|-61.52
 Tunis|Tunisia|c|36.80|10.18
 Ankara|Turkey|c|39.93|32.86
-Istanbul|Turkey|m|41.11|29.01
+Istanbul|Turkey|M|41.11|29.01
 İzmir|Turkey|m|38.44|27.15
 Ashgabat|Turkmenistan|c|37.95|58.38
 Kampala|Uganda|c|0.32|32.58
 Kyiv|Ukraine|c|50.44|30.51
-Abu Dhabi|United Arab Emirates|c|24.47|54.37
-Dubai|United Arab Emirates|m|25.23|55.28
-London|United Kingdom|c|51.50|-0.12
+Abu Dhabi|United Arab Emirates|C|24.47|54.37
+Dubai|United Arab Emirates|M|25.23|55.28
+London|United Kingdom|C|51.50|-0.12
 Birmingham|United Kingdom|m|52.48|-1.92
 Edinburgh|United Kingdom|m|55.95|-3.22
 Glasgow|United Kingdom|m|55.88|-4.25
 Manchester|United Kingdom|m|53.50|-2.25
-Washington, D.C.|United States|c|38.90|-77.01
+Washington, D.C.|United States|C|38.90|-77.01
 Anchorage|United States|m|61.22|-149.90
-Chicago|United States|m|41.83|-87.75
-Dallas|United States|m|32.82|-96.84
+Chicago|United States|M|41.83|-87.75
+Dallas|United States|M|32.82|-96.84
 Detroit|United States|m|42.33|-83.08
-Houston|United States|m|29.82|-95.34
+Houston|United States|M|29.82|-95.34
 Irvine|United States|m|33.68|-117.83
 Las Vegas|United States|m|36.21|-115.22
-Los Angeles|United States|m|33.99|-118.18
-Miami|United States|m|25.79|-80.23
-Naples|United States|m|26.14|-81.79
+Los Angeles|United States|M|33.99|-118.18
+Miami|United States|M|25.79|-80.23
 New Orleans|United States|m|30.00|-90.04
-New York|United States|m|40.75|-73.98
-Philadelphia|United States|m|40.00|-75.17
+New York|United States|M|40.75|-73.98
+Philadelphia|United States|M|40.00|-75.17
 San Diego|United States|m|32.82|-117.18
-San Francisco|United States|m|37.77|-122.42
-Seattle|United States|m|47.57|-122.34
+San Francisco|United States|M|37.77|-122.42
+Seattle|United States|M|47.57|-122.34
 St. Louis|United States|m|38.64|-90.24
 Tampa|United States|m|27.95|-82.46
-Vancouver|United States|m|45.63|-122.64
 Albany|United States|s|42.67|-73.82
 Annapolis|United States|s|38.98|-76.49
-Atlanta|United States|s|33.83|-84.40
+Atlanta|United States|S|33.83|-84.40
 Augusta|United States|s|44.31|-69.78
 Austin|United States|s|30.27|-97.74
 Baton Rouge|United States|s|30.46|-91.14
 Bismarck|United States|s|46.81|-100.78
 Boise|United States|s|43.61|-116.23
-Boston|United States|s|42.33|-71.07
+Boston|United States|S|42.33|-71.07
 Carson City|United States|s|39.16|-119.77
 Charleston|United States|s|38.35|-81.63
 Cheyenne|United States|s|41.14|-104.82
 Columbia|United States|s|34.04|-80.90
 Columbus|United States|s|39.98|-82.99
 Concord|United States|s|43.21|-71.54
-Denver|United States|s|39.74|-104.99
+Denver|United States|S|39.74|-104.99
 Des Moines|United States|s|41.58|-93.62
 Dover|United States|s|39.16|-75.52
 Frankfort|United States|s|38.20|-84.87
@@ -541,10 +541,10 @@ Trenton|United States|s|40.22|-74.74
 Montevideo|Uruguay|c|-34.86|-56.17
 Tashkent|Uzbekistan|c|41.31|69.29
 Vatican City|Vatican City|c|41.90|12.45
-Caracas|Venezuela|c|10.50|-66.92
+Caracas|Venezuela|C|10.50|-66.92
 Maracaibo|Venezuela|m|10.73|-71.66
-Hanoi|Vietnam|c|21.04|105.85
-Ho Chi Minh City|Vietnam|m|10.78|106.69
+Hanoi|Vietnam|C|21.04|105.85
+Ho Chi Minh City|Vietnam|M|10.78|106.69
 Sanaa|Yemen|c|15.36|44.20
 Lusaka|Zambia|c|-15.41|28.28
 Harare|Zimbabwe|c|-17.82|31.04

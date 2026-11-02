@@ -33,9 +33,10 @@ struct PlaneTrip {
     static let earthRadius = 6_371.0
     static let equatorSeconds: TimeInterval = 2 * 60 * 60
     static let bucketSeconds: TimeInterval = 5 * 60
-    static let longestLegSeconds: TimeInterval = 55 * 60
+    static let longestLegSeconds: TimeInterval = 20 * 60
     static let shortestHop = 300.0
     static let climb = 0.12
+    static let straightness = cos(45 * Double.pi / 180)
 
     let key: Key
     let cities: [PlaneCity]
@@ -47,7 +48,6 @@ struct PlaneTrip {
         let points = cities.map(\.point)
         let goal = TimeInterval(max(0, key.goalSeconds))
         let count = Self.legCount(goalSeconds: goal)
-        let target = Self.bucket(goal / Double(count))
         var random = Random(seed: key.seed)
         var legs: [PlaneLeg] = []
         guard points.count > 1 else {
@@ -56,24 +56,34 @@ struct PlaneTrip {
         }
         for _ in 0...max(0, key.cycle) {
             var trip: [PlaneLeg] = []
-            for _ in 0..<count {
+            for index in 0..<count {
                 let origin = trip.last?.to ?? legs.last?.to
                 let visited = Set(trip.map(\.from) + [origin].compactMap { $0 })
-                var best = Double.infinity
-                var candidates: [PlaneLeg] = []
+                let arrival = (trip.last ?? legs.last).map { Self.heading(from: points[$0.from], to: points[$0.to], at: points[$0.to]) }
+                let layover = index < count - 1
+                let flown = trip.reduce(0) { $0 + Self.seconds(kilometers: $1.kilometers) }
+                let target = Self.bucket(max(0, goal - flown) / Double(count - index))
                 let origins = origin.map { [$0] } ?? Array(points.indices)
-                for from in origins {
-                    for to in points.indices where to != from && !visited.contains(to) {
-                        let kilometers = points[from].angle(to: points[to]) * Self.earthRadius
-                        guard kilometers >= Self.shortestHop else { continue }
-                        let miss = abs(Self.bucket(Self.seconds(kilometers: kilometers)) - target)
-                        if miss < best {
-                            best = miss
-                            candidates = [PlaneLeg(from: from, to: to, kilometers: kilometers)]
-                        } else if miss == best {
-                            candidates.append(PlaneLeg(from: from, to: to, kilometers: kilometers))
+                var candidates: [PlaneLeg] = []
+                for (ahead, hubs) in [(true, true), (true, false), (false, true), (false, false)] {
+                    var best = Double.infinity
+                    candidates = []
+                    for from in origins {
+                        for to in points.indices where to != from && !visited.contains(to) {
+                            if hubs, layover, !cities[to].hub { continue }
+                            if ahead, let arrival, Self.heading(from: points[from], to: points[to], at: points[from]).dot(arrival) < Self.straightness { continue }
+                            let kilometers = points[from].angle(to: points[to]) * Self.earthRadius
+                            guard kilometers >= Self.shortestHop else { continue }
+                            let miss = abs(Self.bucket(Self.seconds(kilometers: kilometers)) - target)
+                            if miss < best {
+                                best = miss
+                                candidates = [PlaneLeg(from: from, to: to, kilometers: kilometers)]
+                            } else if miss == best {
+                                candidates.append(PlaneLeg(from: from, to: to, kilometers: kilometers))
+                            }
                         }
                     }
+                    if !candidates.isEmpty && (best <= 2 * Self.bucketSeconds || !hubs || !ahead) { break }
                 }
                 guard !candidates.isEmpty else { break }
                 trip.append(candidates[Int(random.next() % UInt64(candidates.count))])
@@ -81,6 +91,12 @@ struct PlaneTrip {
             legs = trip
         }
         self.legs = legs
+    }
+
+    static func heading(from start: PlaneVector, to end: PlaneVector, at point: PlaneVector) -> PlaneVector {
+        let axis = start.cross(end)
+        guard axis.length > 1e-9 else { return PlaneVector(x: 0, y: 0, z: 0) }
+        return axis.normalized.cross(point).normalized
     }
 
     static func seconds(kilometers: Double) -> TimeInterval {
@@ -166,8 +182,7 @@ struct PlaneTrip {
         let start = cities[leg.from].point
         let end = cities[leg.to].point
         let position = PlaneVector.slerp(start, end, along)
-        let axis = start.cross(end)
-        let heading = axis.length > 1e-9 ? axis.normalized.cross(position).normalized : PlaneVector(x: 0, y: 0, z: 1)
+        let heading = start.cross(end).length > 1e-9 ? Self.heading(from: start, to: end, at: position) : PlaneVector(x: 0, y: 0, z: 1)
         let lift = min(along, 1 - along) / Self.climb
         let altitude = stage == .flying ? Self.smoothstep(lift) : 0
         let flown = legs.prefix(index).reduce(0) { $0 + $1.kilometers } + leg.kilometers * along

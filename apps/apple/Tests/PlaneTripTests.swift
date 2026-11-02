@@ -26,16 +26,17 @@ final class PlaneTripTests: XCTestCase {
         XCTAssertEqual(PlaneTrip.bucket(.nan), 0)
     }
 
-    func testLongTimersAreSplitIntoLegsNoLongerThanFiftyFiveMinutes() {
+    func testLongTimersAreSplitIntoLegsNoLongerThanTwentyMinutes() {
         XCTAssertEqual(PlaneTrip.legCount(goalSeconds: 60), 1)
-        XCTAssertEqual(PlaneTrip.legCount(goalSeconds: 3_300), 1)
-        XCTAssertEqual(PlaneTrip.legCount(goalSeconds: 3_301), 2)
-        XCTAssertEqual(PlaneTrip.legCount(goalSeconds: 7_200), 3)
+        XCTAssertEqual(PlaneTrip.legCount(goalSeconds: 1_200), 1)
+        XCTAssertEqual(PlaneTrip.legCount(goalSeconds: 1_201), 2)
+        XCTAssertEqual(PlaneTrip.legCount(goalSeconds: 3_600), 3)
+        XCTAssertEqual(PlaneTrip.legCount(goalSeconds: 7_200), 6)
         XCTAssertEqual(PlaneTrip.legCount(goalSeconds: .nan), 1)
     }
 
     func testEachRunFliesBetweenCapitalsWhoseFlightMatchesTheFocusTime() {
-        for minutes in [1, 5, 25, 45, 55] {
+        for minutes in [1, 5, 10, 15, 20] {
             let target = PlaneTrip.bucket(TimeInterval(minutes * 60))
             for seed in seeds(4) {
                 let trip = PlaneTrip(key: PlaneTrip.Key(seed: seed, goalSeconds: minutes * 60, cycle: 0))
@@ -50,10 +51,12 @@ final class PlaneTripTests: XCTestCase {
     }
 
     func testLongerTimersFlyLongerTrips() {
-        let short = PlaneTrip(key: PlaneTrip.Key(seed: seed, goalSeconds: 10 * 60, cycle: 0))
-        let long = PlaneTrip(key: PlaneTrip.Key(seed: seed, goalSeconds: 50 * 60, cycle: 0))
+        let short = PlaneTrip(key: PlaneTrip.Key(seed: seed, goalSeconds: 5 * 60, cycle: 0))
+        let long = PlaneTrip(key: PlaneTrip.Key(seed: seed, goalSeconds: 20 * 60, cycle: 0))
+        let longest = PlaneTrip(key: PlaneTrip.Key(seed: seed, goalSeconds: 120 * 60, cycle: 0))
 
-        XCTAssertLessThan(short.kilometers * 3, long.kilometers)
+        XCTAssertLessThan(short.kilometers * 2, long.kilometers)
+        XCTAssertLessThan(long.kilometers * 4, longest.kilometers)
     }
 
     func testTripsAreRandomPerRunButStableForTheSameRun() {
@@ -70,15 +73,55 @@ final class PlaneTripTests: XCTestCase {
         for seed in seeds(4) {
             let trip = PlaneTrip(key: PlaneTrip.Key(seed: seed, goalSeconds: 120 * 60, cycle: 0))
 
-            XCTAssertEqual(trip.legs.count, 3)
+            XCTAssertEqual(trip.legs.count, 6)
             for (leg, next) in zip(trip.legs, trip.legs.dropFirst()) {
                 XCTAssertEqual(leg.to, next.from)
             }
-            XCTAssertEqual(Set(trip.stops.map(\.name)).count, 4)
-            for leg in trip.legs {
-                XCTAssertEqual(PlaneTrip.bucket(PlaneTrip.seconds(kilometers: leg.kilometers)), 40 * 60)
+            XCTAssertEqual(Set(trip.stops.map(\.name)).count, 7)
+            XCTAssertEqual(PlaneTrip.seconds(kilometers: trip.kilometers), 120 * 60, accuracy: 450)
+
+        }
+    }
+
+    func testLongTripsKeepFlyingTheSameWayMostlyThroughBigCities() {
+        var layovers = 0
+        var hubs = 0
+        for seed in seeds(12) {
+            let trip = PlaneTrip(key: PlaneTrip.Key(seed: seed, goalSeconds: 120 * 60, cycle: 0))
+            let points = trip.cities.map(\.point)
+
+            for (leg, next) in zip(trip.legs, trip.legs.dropFirst()) {
+                layovers += 1
+                hubs += trip.cities[leg.to].hub ? 1 : 0
+                let arrival = PlaneTrip.heading(from: points[leg.from], to: points[leg.to], at: points[leg.to])
+                let departure = PlaneTrip.heading(from: points[next.from], to: points[next.to], at: points[next.from])
+                XCTAssertGreaterThanOrEqual(arrival.dot(departure), PlaneTrip.straightness - 1e-9)
             }
         }
+        XCTAssertGreaterThan(Double(hubs) / Double(layovers), 0.85)
+    }
+
+    func testHeadingPointsAlongTheGreatCircleTowardTheDestination() {
+        let start = PlaneVector(latitude: 0, longitude: 0)
+        let end = PlaneVector(latitude: 0, longitude: 90)
+
+        let departure = PlaneTrip.heading(from: start, to: end, at: start)
+        XCTAssertEqual(departure.y, 1, accuracy: 1e-9)
+        let arrival = PlaneTrip.heading(from: start, to: end, at: end)
+        XCTAssertEqual(arrival.x, -1, accuracy: 1e-9)
+        XCTAssertEqual(PlaneTrip.heading(from: start, to: start, at: start), PlaneVector(x: 0, y: 0, z: 0))
+        XCTAssertEqual(PlaneTrip.straightness, 0.5.squareRoot(), accuracy: 1e-9)
+    }
+
+    func testRulesRelaxWhenNoBigCityLiesAhead() {
+        let cities = [
+            PlaneCity(name: "West", country: "A", latitude: 0, longitude: 0, kind: .stateCapital),
+            PlaneCity(name: "Middle", country: "B", latitude: 0, longitude: 90, kind: .stateCapital),
+            PlaneCity(name: "Back", country: "C", latitude: 0, longitude: -90, kind: .stateCapital),
+        ]
+
+        let trip = PlaneTrip(key: PlaneTrip.Key(seed: seed, goalSeconds: 120 * 60, cycle: 0), cities: cities)
+        XCTAssertEqual(trip.legs.count, 2)
     }
 
     func testEachLoopCycleTakesOffWhereTheLastOneLanded() {
@@ -86,10 +129,10 @@ final class PlaneTripTests: XCTestCase {
         let second = PlaneTrip(key: PlaneTrip.Key(seed: seed, goalSeconds: 1_500, cycle: 1))
         let third = PlaneTrip(key: PlaneTrip.Key(seed: seed, goalSeconds: 1_500, cycle: 2))
 
-        XCTAssertEqual(second.legs[0].from, first.legs[0].to)
-        XCTAssertEqual(third.legs[0].from, second.legs[0].to)
-        XCTAssertNotEqual(second.legs[0].to, first.legs[0].to)
-        XCTAssertEqual(PlaneTrip.bucket(PlaneTrip.seconds(kilometers: second.legs[0].kilometers)), 1_500)
+        XCTAssertEqual(second.legs[0].from, first.legs.last?.to)
+        XCTAssertEqual(third.legs[0].from, second.legs.last?.to)
+        XCTAssertNotEqual(second.legs[0].to, first.legs.last?.to)
+        XCTAssertEqual(PlaneTrip.bucket(PlaneTrip.seconds(kilometers: second.legs[0].kilometers)), PlaneTrip.bucket(750))
     }
 
     func testTheClosestTripIsUsedWhenNoneMatchAndHopsBelowTheMinimumAreSkipped() {
@@ -99,7 +142,7 @@ final class PlaneTripTests: XCTestCase {
             PlaneCity(name: "Far", country: "C", latitude: 0, longitude: 30),
         ]
 
-        let trip = PlaneTrip(key: PlaneTrip.Key(seed: seed, goalSeconds: 3_000, cycle: 0), cities: close)
+        let trip = PlaneTrip(key: PlaneTrip.Key(seed: seed, goalSeconds: 1_200, cycle: 0), cities: close)
         XCTAssertEqual(trip.legs.count, 1)
         XCTAssertGreaterThan(trip.legs[0].kilometers, 3_000)
         XCTAssertTrue(PlaneTrip(key: PlaneTrip.Key(seed: seed, goalSeconds: 1_500, cycle: 0), cities: Array(close.prefix(1))).legs.isEmpty)
@@ -153,8 +196,8 @@ final class PlaneTripTests: XCTestCase {
         XCTAssertLessThan(later.legProgress, 0.1)
         let layover = try XCTUnwrap(trip.flight(elapsed: 7_200 * first))
         XCTAssertEqual(layover.altitude, 0, accuracy: 1e-9)
-        XCTAssertEqual(trip.flight(elapsed: 7_199)?.leg, 2)
-        XCTAssertEqual(trip.stops.count, 4)
+        XCTAssertEqual(trip.flight(elapsed: 7_199)?.leg, 5)
+        XCTAssertEqual(trip.stops.count, 7)
     }
 
     func testTheFlightOnlyShowsWhileTheTimerIsGoing() {
