@@ -504,8 +504,7 @@ private struct PlaneWorld: View {
             shadow.opacity *= 0.18
             shadow.fill(Path(roundedRect: pill.offsetBy(dx: 0, dy: 2), cornerRadius: pill.height / 2), with: .color(PlanePalette.shadow))
             layer.fill(Path(roundedRect: pill, cornerRadius: pill.height / 2), with: .color(.white))
-            layer.fill(Path(ellipseIn: CGRect(x: pill.minX + 5, y: pill.midY - 2.5, width: 5, height: 5)), with: .color(color))
-            layer.draw(label, at: CGPoint(x: pill.midX + 2, y: pill.midY))
+            layer.draw(label, at: CGPoint(x: pill.midX, y: pill.midY))
         }
     }
 
