@@ -52,10 +52,10 @@ struct PlaneTimerView: View {
 
                 TimelineView(.animation(
                     minimumInterval: 1.0 / 60,
-                    paused: (snapshot.status != .running || scenePhase != .active || reduceMotion) && dragCamera == nil,
+                    paused: (snapshot.status != .running || scenePhase != .active || reduceMotion) && releasedAt == nil,
                 )) { context in
-                    let flight = flight(trip: trip, at: context.date)
-                    let camera = camera(trip: trip, at: context.date)
+                    let flight = flight(trip: trip, snapshot: snapshot, at: context.date)
+                    let camera = camera(trip: trip, snapshot: snapshot, at: context.date)
                     let route = PlaneTrip.route(flight: flight, trip: trip)
                     let caption = PlaneTrip.caption(flight: flight, trip: trip)
 
@@ -75,19 +75,23 @@ struct PlaneTimerView: View {
                                 .monospacedDigit()
                                 .contentTransition(.numericText(countsDown: true))
 
-                            Text(route)
-                                .font(.system(.title3, design: .rounded, weight: .bold))
+                            if !route.isEmpty {
+                                Text(route)
+                                    .font(.system(.title3, design: .rounded, weight: .bold))
+                            }
 
-                            Text(caption)
-                                .font(.system(.subheadline, design: .rounded, weight: .medium))
-                                .monospacedDigit()
-                                .opacity(0.75)
+                            if !caption.isEmpty {
+                                Text(caption)
+                                    .font(.system(.subheadline, design: .rounded, weight: .medium))
+                                    .monospacedDigit()
+                                    .opacity(0.75)
+                            }
                         }
                         .foregroundStyle(PlanePalette.ink)
                         .shadow(color: .white.opacity(0.6), radius: 6)
                         .padding(.top, safeGeometry.safeAreaInsets.top + 82)
                         .accessibilityElement(children: .ignore)
-                        .accessibilityLabel("\(accessibilityStatus). \(snapshot.clockText) remaining. \(route). \(caption). \(snapshot.goalSeconds / 60) minute focus. \(snapshot.restSeconds / 60) minute rest.")
+                        .accessibilityLabel([accessibilityStatus, "\(snapshot.clockText) remaining", route, caption, "\(snapshot.goalSeconds / 60) minute focus", "\(snapshot.restSeconds / 60) minute rest"].filter { !$0.isEmpty }.joined(separator: ". ") + ".")
                     }
                     .contentShape(Rectangle())
                     .gesture(spinGesture(trip: trip, radius: radius))
@@ -99,6 +103,19 @@ struct PlaneTimerView: View {
                 }
                 .onChange(of: key, initial: true) { _, key in
                     self.trip = self.trip(for: key)
+                }
+                .onChange(of: snapshot) { old, new in
+                    let wasFlying = PlaneTrip.showsFlight(status: old.status)
+                    let isFlying = PlaneTrip.showsFlight(status: new.status)
+                    if wasFlying && !isFlying {
+                        let oldTrip = self.trip(for: PlaneTrip.Key(seed: old.runID, goalSeconds: old.goalSeconds, cycle: old.cycle))
+                        dragCamera = camera(trip: oldTrip, snapshot: old, at: .now)
+                        dragStart = nil
+                        releasedAt = nil
+                    } else if !wasFlying && isFlying {
+                        dragCamera = dragCamera ?? PlaneCamera.idle
+                        releasedAt = Date.now.addingTimeInterval(-PlaneCamera.idleDelay)
+                    }
                 }
             }
             .ignoresSafeArea()
@@ -112,24 +129,26 @@ struct PlaneTimerView: View {
     private func spinGesture(trip: PlaneTrip, radius: CGFloat) -> some Gesture {
         DragGesture(minimumDistance: 2)
             .onChanged { gesture in
-                let start = dragStart ?? camera(trip: trip, at: .now)
+                let start = dragStart ?? camera(trip: trip, snapshot: snapshot, at: .now)
                 dragStart = start
                 dragCamera = start.dragged(by: gesture.translation, radius: radius)
                 releasedAt = nil
             }
             .onEnded { _ in
                 dragStart = nil
-                releasedAt = .now
+                releasedAt = PlaneTrip.showsFlight(status: snapshot.status) ? .now : nil
             }
     }
 
-    private func flight(trip: PlaneTrip, at date: Date) -> PlaneFlight? {
-        let elapsed = PlaneTrip.elapsed(snapshot: snapshot, at: reduceMotion ? snapshot.sampledAt : date)
-        return trip.flight(elapsed: elapsed, started: snapshot.status != .ready)
+    private func flight(trip: PlaneTrip, snapshot: TimerSnapshot, at date: Date) -> PlaneFlight? {
+        guard PlaneTrip.showsFlight(status: snapshot.status) else { return nil }
+        return trip.flight(elapsed: PlaneTrip.elapsed(snapshot: snapshot, at: reduceMotion ? snapshot.sampledAt : date))
     }
 
-    private func camera(trip: PlaneTrip, at date: Date) -> PlaneCamera {
-        let follow = flight(trip: trip, at: date).map { PlaneCamera($0.position) } ?? PlaneCamera(latitude: 20, longitude: 0)
+    private func camera(trip: PlaneTrip, snapshot: TimerSnapshot, at date: Date) -> PlaneCamera {
+        guard let follow = flight(trip: trip, snapshot: snapshot, at: date).map({ PlaneCamera($0.position) }) else {
+            return dragCamera ?? PlaneCamera.idle
+        }
         guard let dragCamera else { return follow }
         guard let releasedAt else { return dragCamera }
         return PlaneCamera.returning(from: dragCamera, to: follow, idle: date.timeIntervalSince(releasedAt), duration: returnDuration) ?? follow
@@ -156,7 +175,7 @@ struct PlaneThemePreview: View {
     var body: some View {
         GeometryReader { geometry in
             let trip = PlaneTrip(key: PlaneTrip.Key(seed: UUID(uuid: (0x42, 0x6F, 0x6E, 0x56, 0x6F, 0x79, 0x61, 0x67, 0x65, 0x21, 0x50, 0x6C, 0x61, 0x6E, 0x65, 0x21)), goalSeconds: 1_500, cycle: 0))
-            let flight = trip.flight(elapsed: 600, started: true)
+            let flight = trip.flight(elapsed: 600)
             let radius = min(geometry.size.width, geometry.size.height) * 0.4
 
             ZStack(alignment: .top) {
@@ -166,7 +185,7 @@ struct PlaneThemePreview: View {
                     globe: PlaneGlobe(
                         center: CGPoint(x: geometry.size.width / 2, y: geometry.size.height * 0.6),
                         radius: radius,
-                        camera: flight.map { PlaneCamera($0.position) } ?? PlaneCamera(latitude: 20, longitude: 0),
+                        camera: flight.map { PlaneCamera($0.position) } ?? PlaneCamera.idle,
                     ),
                     time: 0,
                     showsLabels: false,
@@ -440,6 +459,7 @@ private struct PlaneWorld: View {
     }
 
     private func drawStops(in context: GraphicsContext, size canvas: CGSize, plane: PlanePlacement?) {
+        guard flight != nil else { return }
         let stops = trip.stops
         for (index, city) in stops.enumerated() {
             let point = city.point

@@ -176,5 +176,6 @@ final class PlaneGlobeTests: XCTestCase {
         XCTAssertEqual(PlaneCamera.returning(from: manual, to: follow, idle: -5), manual)
         XCTAssertNil(PlaneCamera.returning(from: manual, to: follow, idle: PlaneCamera.idleDelay + 0.01, duration: 0))
         XCTAssertEqual(PlaneCamera(PlaneVector(latitude: 20, longitude: -30)).longitude, -30, accuracy: 1e-9)
+        XCTAssertEqual(PlaneCamera.idle, PlaneCamera(latitude: 25, longitude: 15))
     }
 }

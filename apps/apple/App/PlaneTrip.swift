@@ -116,12 +116,16 @@ struct PlaneTrip {
         return [cities[first.from]] + legs.map { cities[$0.to] }
     }
 
-    func flight(elapsed rawElapsed: TimeInterval, started: Bool) -> PlaneFlight? {
+    static func showsFlight(status: TimerSnapshot.Status) -> Bool {
+        status == .running || status == .paused
+    }
+
+    func flight(elapsed rawElapsed: TimeInterval) -> PlaneFlight? {
         guard let first = legs.first, let last = legs.last else { return nil }
         let goal = TimeInterval(max(0, key.goalSeconds))
         let elapsed = rawElapsed.isFinite ? max(0, rawElapsed) : 0
         let total = kilometers
-        if !started || (elapsed <= 0 && goal > 0) {
+        if elapsed <= 0 && goal > 0 {
             return flight(.boarding, leg: 0, progress: 0, along: 0, total: total, of: first)
         }
         if goal <= 0 || elapsed >= goal {

@@ -111,13 +111,13 @@ final class PlaneTripTests: XCTestCase {
         let start = trip.cities[trip.legs[0].from].point
         let end = trip.cities[trip.legs[0].to].point
 
-        let boarding = try XCTUnwrap(trip.flight(elapsed: 500, started: false))
+        let boarding = try XCTUnwrap(trip.flight(elapsed: 0))
         XCTAssertEqual(boarding.stage, .boarding)
         XCTAssertEqual(boarding.position, start)
         XCTAssertEqual(boarding.altitude, 0)
         XCTAssertEqual(boarding.remainingKilometers, trip.kilometers, accuracy: 1e-9)
 
-        let cruising = try XCTUnwrap(trip.flight(elapsed: 500, started: true))
+        let cruising = try XCTUnwrap(trip.flight(elapsed: 500))
         XCTAssertEqual(cruising.stage, .flying)
         XCTAssertEqual(cruising.progress, 0.5, accuracy: 1e-9)
         XCTAssertEqual(cruising.position.longitude, 5, accuracy: 1e-9)
@@ -127,46 +127,53 @@ final class PlaneTripTests: XCTestCase {
         XCTAssertGreaterThan(cruising.heading.dot(end), 0)
         XCTAssertEqual(cruising.heading.length, 1, accuracy: 1e-9)
 
-        let climbing = try XCTUnwrap(trip.flight(elapsed: 30, started: true))
+        let climbing = try XCTUnwrap(trip.flight(elapsed: 30))
         XCTAssertGreaterThan(climbing.altitude, 0)
         XCTAssertLessThan(climbing.altitude, 1)
 
-        let landed = try XCTUnwrap(trip.flight(elapsed: 5_000, started: true))
+        let landed = try XCTUnwrap(trip.flight(elapsed: 5_000))
         XCTAssertEqual(landed.stage, .landed)
         XCTAssertEqual(landed.position.angle(to: end), 0, accuracy: 1e-9)
         XCTAssertEqual(landed.altitude, 0)
         XCTAssertEqual(landed.remainingKilometers, 0, accuracy: 1e-9)
-        XCTAssertEqual(trip.flight(elapsed: .nan, started: true)?.stage, .boarding)
-        XCTAssertEqual(PlaneTrip(key: PlaneTrip.Key(seed: seed, goalSeconds: 0, cycle: 0), cities: line).flight(elapsed: 0, started: true)?.stage, .landed)
-        XCTAssertNil(PlaneTrip(key: PlaneTrip.Key(seed: seed, goalSeconds: 600, cycle: 0), cities: []).flight(elapsed: 0, started: true))
+        XCTAssertEqual(trip.flight(elapsed: .nan)?.stage, .boarding)
+        XCTAssertEqual(PlaneTrip(key: PlaneTrip.Key(seed: seed, goalSeconds: 0, cycle: 0), cities: line).flight(elapsed: 0)?.stage, .landed)
+        XCTAssertNil(PlaneTrip(key: PlaneTrip.Key(seed: seed, goalSeconds: 600, cycle: 0), cities: []).flight(elapsed: 0))
     }
 
     func testMultiLegFlightsSpendTimeOnEachLegInProportionToItsDistance() throws {
         let trip = PlaneTrip(key: PlaneTrip.Key(seed: seed, goalSeconds: 120 * 60, cycle: 0))
         let first = trip.legs[0].kilometers / trip.kilometers
 
-        let early = try XCTUnwrap(trip.flight(elapsed: 7_200 * first * 0.5, started: true))
+        let early = try XCTUnwrap(trip.flight(elapsed: 7_200 * first * 0.5))
         XCTAssertEqual(early.leg, 0)
         XCTAssertEqual(early.legProgress, 0.5, accuracy: 1e-9)
-        let later = try XCTUnwrap(trip.flight(elapsed: 7_200 * (first + 0.01), started: true))
+        let later = try XCTUnwrap(trip.flight(elapsed: 7_200 * (first + 0.01)))
         XCTAssertEqual(later.leg, 1)
         XCTAssertLessThan(later.legProgress, 0.1)
-        let layover = try XCTUnwrap(trip.flight(elapsed: 7_200 * first, started: true))
+        let layover = try XCTUnwrap(trip.flight(elapsed: 7_200 * first))
         XCTAssertEqual(layover.altitude, 0, accuracy: 1e-9)
-        XCTAssertEqual(trip.flight(elapsed: 7_199, started: true)?.leg, 2)
+        XCTAssertEqual(trip.flight(elapsed: 7_199)?.leg, 2)
         XCTAssertEqual(trip.stops.count, 4)
+    }
+
+    func testTheFlightOnlyShowsWhileTheTimerIsGoing() {
+        XCTAssertFalse(PlaneTrip.showsFlight(status: .ready))
+        XCTAssertTrue(PlaneTrip.showsFlight(status: .running))
+        XCTAssertTrue(PlaneTrip.showsFlight(status: .paused))
+        XCTAssertFalse(PlaneTrip.showsFlight(status: .complete))
     }
 
     func testCaptionsAndRoutesDescribeTheTrip() throws {
         let trip = PlaneTrip(key: PlaneTrip.Key(seed: seed, goalSeconds: 1_000, cycle: 0), cities: Array(line.prefix(2)))
 
-        XCTAssertEqual(PlaneTrip.caption(flight: trip.flight(elapsed: 0, started: false), trip: trip), "now boarding")
-        let cruising = try XCTUnwrap(trip.flight(elapsed: 500, started: true))
+        XCTAssertEqual(PlaneTrip.caption(flight: trip.flight(elapsed: 0), trip: trip), "now boarding")
+        let cruising = try XCTUnwrap(trip.flight(elapsed: 500))
         XCTAssertEqual(PlaneTrip.caption(flight: cruising, trip: trip), "\(Int(cruising.remainingKilometers.rounded()).formatted(.number.grouping(.automatic))) km to go")
         let from = trip.cities[trip.legs[0].from].name
         let to = trip.cities[trip.legs[0].to].name
         XCTAssertEqual(Set([from, to]), ["Zero", "Ten"])
-        XCTAssertEqual(PlaneTrip.caption(flight: trip.flight(elapsed: 1_000, started: true), trip: trip), "welcome to \(to)")
+        XCTAssertEqual(PlaneTrip.caption(flight: trip.flight(elapsed: 1_000), trip: trip), "welcome to \(to)")
         XCTAssertEqual(PlaneTrip.route(flight: cruising, trip: trip), "\(from) → \(to)")
         XCTAssertEqual(PlaneTrip.caption(flight: nil, trip: trip), "")
         XCTAssertEqual(PlaneTrip.route(flight: nil, trip: trip), "")

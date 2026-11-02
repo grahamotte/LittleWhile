@@ -72,6 +72,7 @@ struct PlaneCamera: Equatable {
     static let maximumLatitude = 80.0
     static let idleDelay: TimeInterval = 3
     static let returnDuration: TimeInterval = 1.2
+    static let idle = PlaneCamera(latitude: 25, longitude: 15)
 
     let latitude: Double
     let longitude: Double
