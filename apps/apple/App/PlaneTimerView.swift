@@ -30,6 +30,19 @@ private enum PlanePalette {
     static let ink = Color(red: 0.07, green: 0.16, blue: 0.33)
     static let cloud = Color.white
     static let shadow = Color(red: 0.03, green: 0.12, blue: 0.3)
+    static let nightSky = [
+        Color(red: 0.02, green: 0.04, blue: 0.14),
+        Color(red: 0.07, green: 0.09, blue: 0.27),
+        Color(red: 0.24, green: 0.16, blue: 0.36),
+    ]
+    static let night = Color(red: 0.01, green: 0.03, blue: 0.13)
+    static let nightAtmosphere = Color(red: 0.32, green: 0.45, blue: 0.9)
+    static let nightCloud = Color(red: 0.42, green: 0.48, blue: 0.62)
+    static let cityLight = Color(red: 1, green: 0.84, blue: 0.45)
+    static let moon = Color(red: 0.95, green: 0.95, blue: 0.86)
+    static let nightInk = Color(red: 0.93, green: 0.95, blue: 1)
+    static let navigationRed = Color(red: 1, green: 0.2, blue: 0.25)
+    static let navigationGreen = Color(red: 0.25, green: 1, blue: 0.45)
 }
 
 struct PlaneTimerView: View {
@@ -56,6 +69,8 @@ struct PlaneTimerView: View {
                 )) { context in
                     let flight = flight(trip: trip, snapshot: snapshot, at: context.date)
                     let camera = camera(trip: trip, snapshot: snapshot, at: context.date)
+                    let sun = PlaneDaylight.sun(at: reduceMotion ? snapshot.sampledAt : context.date)
+                    let night = PlaneDaylight.night(at: camera.vector, sun: sun)
                     let route = PlaneTrip.route(flight: flight, trip: trip)
                     let caption = PlaneTrip.caption(flight: flight, trip: trip)
 
@@ -64,6 +79,7 @@ struct PlaneTimerView: View {
                             trip: trip,
                             flight: flight,
                             globe: PlaneGlobe(center: center, radius: radius, camera: camera),
+                            sun: sun,
                             time: reduceMotion ? 0 : PlaneTrip.elapsed(snapshot: snapshot, at: context.date),
                             showsLabels: true,
                         )
@@ -87,8 +103,8 @@ struct PlaneTimerView: View {
                                     .opacity(0.75)
                             }
                         }
-                        .foregroundStyle(PlanePalette.ink)
-                        .shadow(color: .white.opacity(0.6), radius: 6)
+                        .foregroundStyle(PlanePalette.ink.mix(with: PlanePalette.nightInk, by: night))
+                        .shadow(color: Color.white.mix(with: PlanePalette.night, by: night).opacity(0.6), radius: 6)
                         .padding(.top, safeGeometry.safeAreaInsets.top + 82)
                         .accessibilityElement(children: .ignore)
                         .accessibilityLabel([accessibilityStatus, "\(snapshot.clockText) remaining", route, caption, "\(snapshot.goalSeconds / 60) minute focus", "\(snapshot.restSeconds / 60) minute rest"].filter { !$0.isEmpty }.joined(separator: ". ") + ".")
@@ -187,6 +203,7 @@ struct PlaneThemePreview: View {
                         radius: radius,
                         camera: flight.map { PlaneCamera($0.position) } ?? PlaneCamera.idle,
                     ),
+                    sun: PlaneVector(latitude: 15, longitude: (flight?.position.longitude ?? 0) - 70),
                     time: 0,
                     showsLabels: false,
                 )
@@ -270,6 +287,7 @@ private struct PlaneWorld: View {
     let trip: PlaneTrip
     let flight: PlaneFlight?
     let globe: PlaneGlobe
+    let sun: PlaneVector
     let time: TimeInterval
     let showsLabels: Bool
 
@@ -303,18 +321,50 @@ private struct PlaneWorld: View {
             startPoint: .zero,
             endPoint: CGPoint(x: 0, y: size.height),
         ))
-        let sun = CGPoint(x: size.width * 0.84, y: size.height * 0.14)
+        let night = PlaneDaylight.night(at: globe.camera.vector, sun: sun)
+        let glow = CGPoint(x: size.width * 0.84, y: size.height * 0.14)
         context.fill(sky, with: .radialGradient(
             Gradient(colors: [PlanePalette.sun.opacity(0.9), PlanePalette.sun.opacity(0)]),
-            center: sun,
+            center: glow,
             startRadius: 0,
             endRadius: max(1, size.width * 0.55),
         ))
+        if night > 0 {
+            var dark = context
+            dark.opacity = night
+            dark.fill(sky, with: .linearGradient(
+                Gradient(colors: PlanePalette.nightSky),
+                startPoint: .zero,
+                endPoint: CGPoint(x: 0, y: size.height),
+            ))
+            var stars = Path()
+            for index in 0..<70 {
+                let twinkle = 0.6 + 0.4 * sin(time * 1.3 + Double(index) * 2.1)
+                let radius = (0.5 + 1.1 * CGFloat(Self.noise(index, 3.7))) * CGFloat(twinkle)
+                let point = CGPoint(x: CGFloat(Self.noise(index, 12.9898)) * size.width, y: CGFloat(Self.noise(index, 78.233)) * size.height * 0.75)
+                stars.addEllipse(in: CGRect(x: point.x - radius, y: point.y - radius, width: radius * 2, height: radius * 2))
+            }
+            dark.fill(stars, with: .color(.white.opacity(0.85)))
+            let moon = max(8, min(size.width, size.height) * 0.045)
+            dark.fill(
+                Path(ellipseIn: CGRect(x: glow.x - moon * 3, y: glow.y - moon * 3, width: moon * 6, height: moon * 6)),
+                with: .radialGradient(Gradient(colors: [PlanePalette.moon.opacity(0.25), PlanePalette.moon.opacity(0)]), center: glow, startRadius: moon, endRadius: moon * 3),
+            )
+            var crescent = dark
+            crescent.clip(to: Path(ellipseIn: CGRect(x: glow.x - moon * 0.45, y: glow.y - moon * 1.15, width: moon * 2, height: moon * 2)), options: .inverse)
+            crescent.fill(Path(ellipseIn: CGRect(x: glow.x - moon, y: glow.y - moon, width: moon * 2, height: moon * 2)), with: .color(PlanePalette.moon))
+        }
         for cloud in Self.skyClouds {
             let width = size.width * cloud.size
             let span = size.width + width * 2
             let travel = (cloud.x * span + CGFloat(time) * cloud.speed).truncatingRemainder(dividingBy: span)
-            drawPuff(in: context, center: CGPoint(x: travel - width, y: size.height * cloud.y), width: width, opacity: 0.55)
+            drawPuff(
+                in: context,
+                center: CGPoint(x: travel - width, y: size.height * cloud.y),
+                width: width,
+                opacity: 0.55 * (1 - 0.5 * night),
+                color: PlanePalette.cloud.mix(with: PlanePalette.nightCloud, by: night),
+            )
         }
     }
 
@@ -324,12 +374,14 @@ private struct PlaneWorld: View {
         guard radius > 0 else { return }
         let disc = Path(ellipseIn: CGRect(x: center.x - radius, y: center.y - radius, width: radius * 2, height: radius * 2))
         let halo = radius * 1.16
+        let night = PlaneDaylight.night(at: globe.camera.vector, sun: sun)
+        let atmosphere = PlanePalette.atmosphere.mix(with: PlanePalette.nightAtmosphere, by: night)
         context.fill(
             Path(ellipseIn: CGRect(x: center.x - halo, y: center.y - halo, width: halo * 2, height: halo * 2)),
             with: .radialGradient(
                 Gradient(stops: [
-                    .init(color: PlanePalette.atmosphere.opacity(0.85), location: 0.82),
-                    .init(color: PlanePalette.atmosphere.opacity(0), location: 1),
+                    .init(color: atmosphere.opacity(0.85 - 0.4 * night), location: 0.82),
+                    .init(color: atmosphere.opacity(0), location: 1),
                 ]),
                 center: center,
                 startRadius: 0,
@@ -371,22 +423,49 @@ private struct PlaneWorld: View {
 
         var capitals = Path()
         var cities = Path()
+        var glows = Array(repeating: Path(), count: 4)
+        var lights = Array(repeating: Path(), count: 4)
         let dot = max(0.8, radius * 0.009)
         for city in trip.cities {
             let point = city.point
             let depth = globe.depth(point)
             guard depth > 0 else { continue }
             let center = globe.project(point)
-            let size = dot * CGFloat(min(1, depth * 3)) * (city.kind == .capital ? 1.25 : 0.8)
-            let marker = CGRect(x: center.x - size, y: center.y - size, width: size * 2, height: size * 2)
-            if city.kind == .capital {
-                capitals.addEllipse(in: marker)
-            } else {
-                cities.addEllipse(in: marker)
+            let scale = CGFloat(min(1, depth * 3))
+            let darkness = PlaneDaylight.night(at: point, sun: sun)
+            if darkness < 0.5 {
+                let size = dot * scale * (city.kind == .capital ? 1.25 : 0.8)
+                let marker = CGRect(x: center.x - size, y: center.y - size, width: size * 2, height: size * 2)
+                if city.kind == .capital {
+                    capitals.addEllipse(in: marker)
+                } else {
+                    cities.addEllipse(in: marker)
+                }
             }
+            let level = min(3, Int(darkness * 4))
+            guard darkness > 0.1 else { continue }
+            let core = dot * scale * (city.hub ? 1.3 : 0.85)
+            let halo = core * (city.hub ? 4.5 : 3.2)
+            glows[level].addEllipse(in: CGRect(x: center.x - halo, y: center.y - halo, width: halo * 2, height: halo * 2))
+            lights[level].addEllipse(in: CGRect(x: center.x - core, y: center.y - core, width: core * 2, height: core * 2))
         }
         surface.fill(cities, with: .color(PlanePalette.capital.opacity(0.35)))
         surface.fill(capitals, with: .color(PlanePalette.capital.opacity(0.6)))
+
+        for band in 0..<12 {
+            var shade = surface
+            shade.opacity = 0.075
+            shade.fill(
+                globe.nightPath(sun: sun, radius: Double.pi / 2 + (Double(band) - 5.5) * 0.022),
+                with: .color(PlanePalette.night),
+                style: FillStyle(eoFill: true),
+            )
+        }
+        for level in 0..<4 {
+            let strength = Double(level + 1) / 4
+            surface.fill(glows[level], with: .color(PlanePalette.cityLight.opacity(0.14 * strength)))
+            surface.fill(lights[level], with: .color(PlanePalette.cityLight.opacity(strength)))
+        }
 
         surface.fill(disc, with: .radialGradient(
             Gradient(stops: [
@@ -399,7 +478,7 @@ private struct PlaneWorld: View {
         ))
         let shine = CGRect(x: center.x - radius * 0.72, y: center.y - radius * 0.78, width: radius * 0.7, height: radius * 0.44)
         surface.fill(Path(ellipseIn: shine), with: .radialGradient(
-            Gradient(colors: [.white.opacity(0.35), .white.opacity(0)]),
+            Gradient(colors: [.white.opacity(0.35 * (1 - 0.7 * night)), .white.opacity(0)]),
             center: CGPoint(x: shine.midX, y: shine.midY),
             startRadius: 0,
             endRadius: radius * 0.36,
@@ -438,7 +517,8 @@ private struct PlaneWorld: View {
             var shadow = context
             shadow.opacity = 0.14 * fade
             drawPuff(in: shadow, center: CGPoint(x: center.x + width * 0.08, y: center.y + width * 0.16), width: width, color: PlanePalette.shadow)
-            drawPuff(in: context, center: center, width: width, opacity: 0.9 * fade)
+            let darkness = PlaneDaylight.night(at: point, sun: sun)
+            drawPuff(in: context, center: center, width: width, opacity: 0.9 * fade * (1 - 0.45 * darkness), color: PlanePalette.cloud.mix(with: PlanePalette.nightCloud, by: darkness))
         }
     }
 
@@ -574,10 +654,30 @@ private struct PlaneWorld: View {
         fin.move(to: CGPoint(x: 0, y: rect.minY + plane.size * 0.78))
         fin.addLine(to: CGPoint(x: 0, y: rect.minY + plane.size * 0.96))
         jet.stroke(fin, with: .color(PlanePalette.accent), style: StrokeStyle(lineWidth: max(1, plane.size * 0.05), lineCap: .round))
+
+        let darkness = flight.map { PlaneDaylight.night(at: $0.position, sun: sun) } ?? 0
+        let strobe = time > 0 && (time * 1.1).truncatingRemainder(dividingBy: 1) < 0.12
+        let beacons: [(CGFloat, CGFloat, Color, Bool)] = [
+            (0.03, 0.63, PlanePalette.navigationRed, true),
+            (0.97, 0.63, PlanePalette.navigationGreen, true),
+            (0.5, 0.99, .white, strobe),
+        ]
+        for (x, y, color, lit) in beacons where lit {
+            let point = CGPoint(x: rect.minX + plane.size * x, y: rect.minY + plane.size * y)
+            let core = max(1, plane.size * 0.035)
+            let halo = core * (2 + 3 * CGFloat(darkness))
+            jet.fill(Path(ellipseIn: CGRect(x: point.x - halo, y: point.y - halo, width: halo * 2, height: halo * 2)), with: .color(color.opacity(0.2 + 0.35 * darkness)))
+            jet.fill(Path(ellipseIn: CGRect(x: point.x - core, y: point.y - core, width: core * 2, height: core * 2)), with: .color(color))
+        }
     }
 
     private static func smoothstep(_ value: Double) -> Double {
         let x = min(1, max(0, value.isFinite ? value : 0))
         return x * x * (3 - 2 * x)
+    }
+
+    private static func noise(_ index: Int, _ salt: Double) -> Double {
+        let value = sin(Double(index) * salt) * 43_758.545_3
+        return value - value.rounded(.down)
     }
 }

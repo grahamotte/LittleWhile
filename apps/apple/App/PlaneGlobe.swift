@@ -110,6 +110,27 @@ struct PlaneCamera: Equatable {
     }
 }
 
+enum PlaneDaylight {
+    static let tilt = 23.44
+    static let dawn = 0.1
+    static let dusk = -0.14
+
+    static func sun(at date: Date) -> PlaneVector {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0) ?? .current
+        let day = Double(calendar.ordinality(of: .day, in: .year, for: date) ?? 1)
+        let seconds = date.timeIntervalSince1970.truncatingRemainder(dividingBy: 86_400)
+        let hours = (seconds < 0 ? seconds + 86_400 : seconds) / 3_600
+        let declination = tilt * sin(2 * .pi * (day - 81) / 365)
+        return PlaneVector(latitude: declination, longitude: remainder(180 - hours * 15, 360))
+    }
+
+    static func night(at point: PlaneVector, sun: PlaneVector) -> Double {
+        let progress = min(1, max(0, (dawn - point.dot(sun)) / (dawn - dusk)))
+        return progress * progress * (3 - 2 * progress)
+    }
+}
+
 struct PlaneGlobe {
     let center: CGPoint
     let radius: CGFloat
@@ -208,6 +229,25 @@ struct PlaneGlobe {
             }
         }
         path.closeSubpath()
+        return path
+    }
+
+    func capPath(around center: PlaneVector, radius angle: Double) -> Path {
+        let center = center.normalized
+        let reference = abs(center.z) < 0.9 ? PlaneVector(x: 0, y: 0, z: 1) : PlaneVector(x: 1, y: 0, z: 0)
+        let first = reference.cross(center).normalized
+        let second = center.cross(first)
+        let ring = stride(from: 0.0, to: 360, by: 3).map { degrees -> PlaneVector in
+            let turn = -degrees * .pi / 180
+            return center * cos(angle) + (first * cos(turn) + second * sin(turn)) * sin(angle)
+        }
+        return landPath(ring)
+    }
+
+    func nightPath(sun: PlaneVector, radius angle: Double) -> Path {
+        guard angle > .pi / 2 else { return capPath(around: sun * -1, radius: angle) }
+        var path = Path(ellipseIn: CGRect(x: center.x - radius, y: center.y - radius, width: radius * 2, height: radius * 2))
+        path.addPath(capPath(around: sun, radius: .pi - angle))
         return path
     }
 

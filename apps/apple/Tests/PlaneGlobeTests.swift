@@ -120,6 +120,68 @@ final class PlaneGlobeTests: XCTestCase {
         }
     }
 
+    func testTheSunCrossesTheGreenwichMeridianAtNoonAndTiltsWithTheSeasons() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try XCTUnwrap(TimeZone(secondsFromGMT: 0))
+        let noon = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 3, day: 21, hour: 12)))
+        let midnight = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 3, day: 21, hour: 0)))
+        let june = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 6, day: 21, hour: 18)))
+        let december = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 12, day: 21, hour: 6)))
+
+        XCTAssertEqual(PlaneDaylight.sun(at: noon).longitude, 0, accuracy: 1e-9)
+        XCTAssertEqual(PlaneDaylight.sun(at: noon).latitude, 0, accuracy: 1)
+        XCTAssertEqual(abs(PlaneDaylight.sun(at: midnight).longitude), 180, accuracy: 1e-9)
+        XCTAssertEqual(PlaneDaylight.sun(at: june).latitude, 23.44, accuracy: 0.2)
+        XCTAssertEqual(PlaneDaylight.sun(at: june).longitude, -90, accuracy: 1e-9)
+        XCTAssertEqual(PlaneDaylight.sun(at: december).latitude, -23.44, accuracy: 0.2)
+        XCTAssertEqual(PlaneDaylight.sun(at: december).longitude, 90, accuracy: 1e-9)
+    }
+
+    func testNightFadesInAcrossTheTerminator() {
+        let sun = PlaneVector(latitude: 0, longitude: 0)
+
+        XCTAssertEqual(PlaneDaylight.night(at: sun, sun: sun), 0)
+        XCTAssertEqual(PlaneDaylight.night(at: PlaneVector(latitude: 0, longitude: 180), sun: sun), 1)
+        let dusk = PlaneDaylight.night(at: PlaneVector(latitude: 0, longitude: 90), sun: sun)
+        XCTAssertGreaterThan(dusk, 0.2)
+        XCTAssertLessThan(dusk, 0.6)
+        XCTAssertLessThan(PlaneDaylight.night(at: PlaneVector(latitude: 0, longitude: 85), sun: sun), dusk)
+        XCTAssertGreaterThan(PlaneDaylight.night(at: PlaneVector(latitude: 0, longitude: 95), sun: sun), dusk)
+    }
+
+    func testCapsCoverTheirCenterAndClipAtTheRim() {
+        let globe = PlaneGlobe(center: center, radius: 100, camera: PlaneCamera(latitude: 0, longitude: 0))
+        let front = PlaneVector(latitude: 0, longitude: 0)
+
+        let small = globe.capPath(around: front, radius: 0.2).cgPath
+        XCTAssertTrue(small.contains(center))
+        XCTAssertFalse(small.contains(CGPoint(x: 250, y: 300)))
+        XCTAssertTrue(globe.capPath(around: PlaneVector(latitude: 0, longitude: 180), radius: 0.2).isEmpty)
+        let edge = globe.capPath(around: PlaneVector(latitude: 0, longitude: 120), radius: 0.8).cgPath
+        XCTAssertTrue(edge.contains(CGPoint(x: 299, y: 300)))
+        XCTAssertFalse(edge.contains(center))
+        let polar = globe.capPath(around: PlaneVector(latitude: 90, longitude: 0), radius: 0.3).cgPath
+        XCTAssertTrue(polar.contains(CGPoint(x: 200, y: 203)))
+        XCTAssertFalse(polar.contains(CGPoint(x: 200, y: 260)))
+    }
+
+    func testNightCoversTheSideFacingAwayFromTheSun() {
+        let globe = PlaneGlobe(center: center, radius: 100, camera: PlaneCamera(latitude: 0, longitude: 0))
+        let east = PlaneVector(latitude: 0, longitude: 90)
+
+        let half = globe.nightPath(sun: east, radius: .pi / 2).cgPath
+        XCTAssertTrue(half.contains(CGPoint(x: 150, y: 300)))
+        XCTAssertFalse(half.contains(CGPoint(x: 250, y: 300)))
+        let wide = globe.nightPath(sun: east, radius: .pi * 0.6)
+        XCTAssertTrue(wide.contains(CGPoint(x: 210, y: 300), eoFill: true))
+        XCTAssertFalse(wide.contains(CGPoint(x: 290, y: 300), eoFill: true))
+        XCTAssertFalse(wide.contains(CGPoint(x: 199.5, y: 420), eoFill: true))
+        let noon = globe.nightPath(sun: PlaneVector(latitude: 0, longitude: 0), radius: .pi * 0.6)
+        XCTAssertTrue(noon.contains(CGPoint(x: 299, y: 300), eoFill: true))
+        XCTAssertFalse(noon.contains(center, eoFill: true))
+        XCTAssertTrue(globe.nightPath(sun: PlaneVector(latitude: 0, longitude: 0), radius: .pi * 0.4).isEmpty)
+    }
+
     func testLinesStopAtTheHorizon() {
         let globe = PlaneGlobe(center: center, radius: 100, camera: PlaneCamera(latitude: 0, longitude: 0))
 
