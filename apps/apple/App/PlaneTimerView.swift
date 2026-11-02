@@ -71,6 +71,7 @@ struct PlaneTimerView: View {
                     let camera = camera(trip: trip, snapshot: snapshot, at: context.date)
                     let sun = PlaneDaylight.sun(at: reduceMotion ? snapshot.sampledAt : context.date)
                     let night = PlaneDaylight.night(at: camera.vector, sun: sun)
+                    let lightText = min(1, max(0, (night - 0.4) / 0.2))
                     let route = PlaneTrip.route(flight: flight, trip: trip)
                     let caption = PlaneTrip.caption(flight: flight, trip: trip)
 
@@ -103,8 +104,8 @@ struct PlaneTimerView: View {
                                     .opacity(0.75)
                             }
                         }
-                        .foregroundStyle(PlanePalette.ink.mix(with: PlanePalette.nightInk, by: night))
-                        .shadow(color: Color.white.mix(with: PlanePalette.night, by: night).opacity(0.6), radius: 6)
+                        .foregroundStyle(PlanePalette.ink.mix(with: PlanePalette.nightInk, by: lightText))
+                        .shadow(color: Color.white.mix(with: PlanePalette.night, by: lightText).opacity(0.7), radius: 6)
                         .padding(.top, safeGeometry.safeAreaInsets.top + 82)
                         .accessibilityElement(children: .ignore)
                         .accessibilityLabel([accessibilityStatus, "\(snapshot.clockText) remaining", route, caption, "\(snapshot.goalSeconds / 60) minute focus", "\(snapshot.restSeconds / 60) minute rest"].filter { !$0.isEmpty }.joined(separator: ". ") + ".")
@@ -346,11 +347,13 @@ private struct PlaneWorld: View {
             }
             dark.fill(stars, with: .color(.white.opacity(0.85)))
             let moon = max(8, min(size.width, size.height) * 0.045)
-            dark.fill(
+            var moonlight = context
+            moonlight.opacity = Self.smoothstep((night - 0.55) / 0.35)
+            moonlight.fill(
                 Path(ellipseIn: CGRect(x: glow.x - moon * 3, y: glow.y - moon * 3, width: moon * 6, height: moon * 6)),
                 with: .radialGradient(Gradient(colors: [PlanePalette.moon.opacity(0.25), PlanePalette.moon.opacity(0)]), center: glow, startRadius: moon, endRadius: moon * 3),
             )
-            var crescent = dark
+            var crescent = moonlight
             crescent.clip(to: Path(ellipseIn: CGRect(x: glow.x - moon * 0.45, y: glow.y - moon * 1.15, width: moon * 2, height: moon * 2)), options: .inverse)
             crescent.fill(Path(ellipseIn: CGRect(x: glow.x - moon, y: glow.y - moon, width: moon * 2, height: moon * 2)), with: .color(PlanePalette.moon))
         }
@@ -452,11 +455,12 @@ private struct PlaneWorld: View {
         surface.fill(cities, with: .color(PlanePalette.capital.opacity(0.35)))
         surface.fill(capitals, with: .color(PlanePalette.capital.opacity(0.6)))
 
-        for band in 0..<12 {
+        let bands = 40
+        for band in 0..<bands {
             var shade = surface
-            shade.opacity = 0.075
+            shade.opacity = 0.031
             shade.fill(
-                globe.nightPath(sun: sun, radius: Double.pi / 2 + (Double(band) - 5.5) * 0.022),
+                globe.nightPath(sun: sun, radius: Double.pi / 2 + PlaneDaylight.twilight * ((Double(band) + 0.5) / Double(bands) * 2 - 1)),
                 with: .color(PlanePalette.night),
                 style: FillStyle(eoFill: true),
             )

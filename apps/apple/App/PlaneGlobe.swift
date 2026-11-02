@@ -112,8 +112,9 @@ struct PlaneCamera: Equatable {
 
 enum PlaneDaylight {
     static let tilt = 23.44
-    static let dawn = 0.1
-    static let dusk = -0.14
+    static let twilight = 22 * Double.pi / 180
+    static let dawn = sin(twilight)
+    static let dusk = -sin(twilight)
 
     static func sun(at date: Date) -> PlaneVector {
         var calendar = Calendar(identifier: .gregorian)

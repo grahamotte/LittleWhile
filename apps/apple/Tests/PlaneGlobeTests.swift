@@ -143,8 +143,10 @@ final class PlaneGlobeTests: XCTestCase {
         XCTAssertEqual(PlaneDaylight.night(at: sun, sun: sun), 0)
         XCTAssertEqual(PlaneDaylight.night(at: PlaneVector(latitude: 0, longitude: 180), sun: sun), 1)
         let dusk = PlaneDaylight.night(at: PlaneVector(latitude: 0, longitude: 90), sun: sun)
-        XCTAssertGreaterThan(dusk, 0.2)
-        XCTAssertLessThan(dusk, 0.6)
+        XCTAssertEqual(dusk, 0.5, accuracy: 1e-9)
+        XCTAssertEqual(PlaneDaylight.night(at: PlaneVector(latitude: 0, longitude: 67), sun: sun), 0, accuracy: 0.01)
+        XCTAssertEqual(PlaneDaylight.night(at: PlaneVector(latitude: 0, longitude: 113), sun: sun), 1, accuracy: 0.01)
+        XCTAssertEqual(PlaneDaylight.twilight, 22 * Double.pi / 180, accuracy: 1e-12)
         XCTAssertLessThan(PlaneDaylight.night(at: PlaneVector(latitude: 0, longitude: 85), sun: sun), dusk)
         XCTAssertGreaterThan(PlaneDaylight.night(at: PlaneVector(latitude: 0, longitude: 95), sun: sun), dusk)
     }
