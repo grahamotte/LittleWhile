@@ -46,6 +46,13 @@ enum TimerThemes {
             preview: AnyView(GraveyardThemePreview()),
             screen: { AnyView(GraveyardTimerView(snapshot: $0)) },
         ),
+        TimerTheme(
+            id: "plane",
+            name: "Bon Voyage",
+            colorScheme: .light,
+            preview: AnyView(PlaneThemePreview()),
+            screen: { AnyView(PlaneTimerView(snapshot: $0)) },
+        ),
     ]
 
     static func resolve(_ id: String) -> TimerTheme {
