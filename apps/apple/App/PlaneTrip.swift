@@ -41,7 +41,7 @@ struct PlaneTrip {
     let cities: [PlaneCity]
     let legs: [PlaneLeg]
 
-    init(key: Key, cities: [PlaneCity] = PlaneAtlas.capitals) {
+    init(key: Key, cities: [PlaneCity] = PlaneAtlas.cities) {
         self.key = key
         self.cities = cities
         let points = cities.map(\.point)

@@ -351,16 +351,23 @@ private struct PlaneWorld: View {
         surface.fill(ice, with: .color(PlanePalette.ice))
 
         var capitals = Path()
+        var cities = Path()
         let dot = max(0.8, radius * 0.009)
         for city in trip.cities {
             let point = city.point
             let depth = globe.depth(point)
             guard depth > 0 else { continue }
             let center = globe.project(point)
-            let size = dot * CGFloat(min(1, depth * 3))
-            capitals.addEllipse(in: CGRect(x: center.x - size, y: center.y - size, width: size * 2, height: size * 2))
+            let size = dot * CGFloat(min(1, depth * 3)) * (city.kind == .capital ? 1.25 : 0.8)
+            let marker = CGRect(x: center.x - size, y: center.y - size, width: size * 2, height: size * 2)
+            if city.kind == .capital {
+                capitals.addEllipse(in: marker)
+            } else {
+                cities.addEllipse(in: marker)
+            }
         }
-        surface.fill(capitals, with: .color(PlanePalette.capital.opacity(0.5)))
+        surface.fill(cities, with: .color(PlanePalette.capital.opacity(0.35)))
+        surface.fill(capitals, with: .color(PlanePalette.capital.opacity(0.6)))
 
         surface.fill(disc, with: .radialGradient(
             Gradient(stops: [

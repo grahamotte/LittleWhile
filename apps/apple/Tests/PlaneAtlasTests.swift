@@ -2,36 +2,57 @@ import XCTest
 @testable import LittleWhileCore
 
 final class PlaneAtlasTests: XCTestCase {
-    func testCapitalsOnDrawnLandAppearOncePerCountryWithValidCoordinates() {
-        let capitals = PlaneAtlas.capitals
+    func testCitiesIncludeCapitalsStateCapitalsAndFamousCitiesOnDrawnLand() {
+        let cities = PlaneAtlas.cities
+        let capitals = cities.filter { $0.kind == .capital }
 
+        XCTAssertEqual(cities.count, 485)
         XCTAssertEqual(capitals.count, 169)
         XCTAssertEqual(Set(capitals.map(\.country)).count, capitals.count)
-        for city in capitals {
+        XCTAssertEqual(cities.filter { $0.kind == .stateCapital }.count, 198)
+        XCTAssertEqual(cities.filter { $0.kind == .city }.count, 118)
+        for city in cities {
             XCTAssertFalse(city.name.isEmpty)
+            XCTAssertFalse(city.name.contains("  "))
             XCTAssertLessThanOrEqual(abs(city.latitude), 90)
             XCTAssertLessThanOrEqual(abs(city.longitude), 180)
+        }
+        for (index, city) in cities.enumerated() {
+            for other in cities[(index + 1)...] where city.kind != .capital || other.kind != .capital {
+                XCTAssertGreaterThan(city.point.angle(to: other.point) * PlaneTrip.earthRadius, 30, "\(city.name) and \(other.name)")
+            }
         }
         let paris = capitals.first { $0.country == "France" }
         XCTAssertEqual(paris?.name, "Paris")
         XCTAssertEqual(paris?.latitude ?? 0, 48.87, accuracy: 0.1)
         XCTAssertEqual(paris?.longitude ?? 0, 2.33, accuracy: 0.1)
         XCTAssertEqual(capitals.first { $0.country == "Kazakhstan" }?.name, "Astana")
-        XCTAssertNil(capitals.first { $0.country == "Nauru" })
-        XCTAssertNil(capitals.first { $0.country == "Maldives" })
         XCTAssertEqual(capitals.first { $0.country == "Nigeria" }?.name, "Abuja")
+        XCTAssertNil(cities.first { $0.country == "Maldives" })
+        XCTAssertNil(cities.first { $0.name == "Honolulu" })
+        XCTAssertEqual(cities.first { $0.name == "Sacramento" }?.kind, .stateCapital)
+        XCTAssertEqual(cities.first { $0.name == "Toronto" }?.kind, .stateCapital)
+        XCTAssertEqual(cities.first { $0.name == "Chengdu" }?.kind, .stateCapital)
+        XCTAssertEqual(cities.first { $0.name == "Sydney" }?.kind, .stateCapital)
+        XCTAssertEqual(cities.first { $0.name == "New York" }?.kind, .city)
+        XCTAssertEqual(cities.first { $0.name == "Hong Kong" }?.kind, .city)
+        XCTAssertEqual(cities.first { $0.name == "Venice" }?.kind, .city)
     }
 
     func testCityParsingRejectsMalformedLines() {
         XCTAssertEqual(
-            PlaneAtlas.city("Lima|Peru|-12.05|-77.05"),
+            PlaneAtlas.city("Lima|Peru|c|-12.05|-77.05"),
             PlaneCity(name: "Lima", country: "Peru", latitude: -12.05, longitude: -77.05),
         )
-        XCTAssertNil(PlaneAtlas.city("Lima|Peru|-12.05"))
-        XCTAssertNil(PlaneAtlas.city("|Peru|-12.05|-77.05"))
-        XCTAssertNil(PlaneAtlas.city("Lima|Peru|north|-77.05"))
-        XCTAssertNil(PlaneAtlas.city("Lima|Peru|91|-77.05"))
-        XCTAssertNil(PlaneAtlas.city("Lima|Peru|10|181"))
+        XCTAssertEqual(PlaneAtlas.city("Osaka|Japan|m|34.75|135.46")?.kind, .city)
+        XCTAssertEqual(PlaneAtlas.city("Austin|United States|s|30.27|-97.74")?.kind, .stateCapital)
+        XCTAssertNil(PlaneAtlas.city("Lima|Peru|-12.05|-77.05"))
+        XCTAssertNil(PlaneAtlas.city("Lima|Peru|x|-12.05|-77.05"))
+        XCTAssertNil(PlaneAtlas.city("Lima|Peru|cs|-12.05|-77.05"))
+        XCTAssertNil(PlaneAtlas.city("|Peru|c|-12.05|-77.05"))
+        XCTAssertNil(PlaneAtlas.city("Lima|Peru|c|north|-77.05"))
+        XCTAssertNil(PlaneAtlas.city("Lima|Peru|c|91|-77.05"))
+        XCTAssertNil(PlaneAtlas.city("Lima|Peru|c|10|181"))
     }
 
     func testRingsAreDensifiedSoNoEdgeIsLongerThanTheMaximumStep() {
